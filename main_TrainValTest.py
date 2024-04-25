@@ -371,34 +371,14 @@ def getModel(model_name, dataset_conf, from_logits = False):
 #%%
 def run():
     # Define dataset parameters
-    dataset = 'HGD' # Options: 'BCI2a','HGD', 'CS2R'
-    
-    if dataset == 'BCI2a': 
-        in_samples = 1125
-        n_channels = 22
-        n_sub = 9
-        n_classes = 4
-        classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
-        data_path = os.path.expanduser('~') + '/BCI Competition IV/BCI Competition IV-2a/BCI Competition IV 2a mat/'
-    elif dataset == 'HGD': 
-        in_samples = 1125
-        n_channels = 44
-        n_sub = 14
-        n_classes = 4
-        classes_labels = ['Right Hand', 'Left Hand','Rest','Feet']     
-        data_path = os.path.expanduser('~') + '/mne_data/MNE-schirrmeister2017-data/robintibor/high-gamma-dataset/raw/master/data/'
-    elif dataset == 'CS2R': 
-        in_samples = 1125
-        # in_samples = 576
-        n_channels = 32
-        n_sub = 18
-        n_classes = 3
-        # classes_labels = ['Fingers', 'Wrist','Elbow','Rest']     
-        classes_labels = ['Fingers', 'Wrist','Elbow']     
-        # classes_labels = ['Fingers', 'Elbow']     
-        data_path = os.path.expanduser('~') + '/CS2R MI EEG dataset/all/EDF - Cleaned - phase one (remove extra runs)/two sessions/'
-    else:
-        raise Exception("'{}' dataset is not supported yet!".format(dataset))
+    dataset = 'BCI2a' 
+
+    in_samples = 1125
+    n_channels = 22
+    n_sub = 9
+    n_classes = 4
+    classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
+    data_path = os.path.expanduser('~') + '/datasets/BCIC2a/raw/'
         
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results"

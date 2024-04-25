@@ -86,13 +86,13 @@ def train(dataset_conf, train_conf, results_path):
     # for all runs (to calculate average accuracy/kappa over all runs)
     perf_allRuns = open(results_path + "/perf_allRuns.npz", 'wb')
     
-    # Get dataset paramters
+    # Get dataset parameters
     dataset = dataset_conf.get('name')
     n_sub = dataset_conf.get('n_sub')
     data_path = dataset_conf.get('data_path')
     isStandard = dataset_conf.get('isStandard')
     LOSO = dataset_conf.get('LOSO')
-    # Get training hyperparamters
+    # Get training hyperparameters
     batch_size = train_conf.get('batch_size')
     epochs = train_conf.get('epochs')
     patience = train_conf.get('patience')
