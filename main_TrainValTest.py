@@ -1,21 +1,3 @@
-""" 
-Copyright (C) 2022 King Saud University, Saudi Arabia 
-SPDX-License-Identifier: Apache-2.0 
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the 
-License at
-
-http://www.apache.org/licenses/LICENSE-2.0  
-
-Unless required by applicable law or agreed to in writing, software distributed
-under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-CONDITIONS OF ANY KIND, either express or implied. See the License for the
-specific language governing permissions and limitations under the License. 
-
-Author:  Hamdi Altaheri 
-"""
-
 #%%
 import os
 import sys
@@ -24,7 +6,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-
+import utils
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import CategoricalCrossentropy
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
@@ -36,47 +18,6 @@ import models
 from preprocess import get_data
 # from keras.utils.vis_utils import plot_model
 
-
-#%%
-def draw_learning_curves(history, sub):
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('Model accuracy - subject: ' + str(sub))
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'val'], loc='upper left')
-    plt.show()
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model loss - subject: ' + str(sub))
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'val'], loc='upper left')
-    plt.show()
-    plt.close()
-
-def draw_confusion_matrix(cf_matrix, sub, results_path, classes_labels):
-    # Generate confusion matrix plot
-    display_labels = classes_labels
-    disp = ConfusionMatrixDisplay(confusion_matrix=cf_matrix, 
-                                display_labels=display_labels)
-    disp.plot()
-    disp.ax_.set_xticklabels(display_labels, rotation=12)
-    plt.title('Confusion Matrix of Subject: ' + sub )
-    plt.savefig(results_path + '/subject_' + sub + '.png')
-    plt.show()
-
-def draw_performance_barChart(num_sub, metric, label):
-    fig, ax = plt.subplots()
-    x = list(range(1, num_sub+1))
-    ax.bar(x, metric, 0.5, label=label)
-    ax.set_ylabel(label)
-    ax.set_xlabel("Subject")
-    ax.set_xticks(x)
-    ax.set_title('Model '+ label + ' per subject')
-    ax.set_ylim([0,1])
-    
-    
 #%% Training 
 def train(dataset_conf, train_conf, results_path):
     
@@ -132,6 +73,7 @@ def train(dataset_conf, train_conf, results_path):
         
         # Iteration over multiple runs 
         for train in range(n_train): # How many repetitions of training for subject i.
+
             # Set the random seed for TensorFlow and NumPy random number generator. 
             # The purpose of setting a seed is to ensure reproducibility in random operations. 
             tf.random.set_seed(train+1)
@@ -144,10 +86,10 @@ def train(dataset_conf, train_conf, results_path):
             filepath = results_path + '/saved models/run-{}'.format(train+1)
             if not os.path.exists(filepath):
                 os.makedirs(filepath)        
-            filepath = filepath + '/subject-{}.h5'.format(sub+1)
+            filepath = filepath + '/subject-{}.weights.h5'.format(sub+1)
             
             # Create the model
-            model = getModel(model_name, dataset_conf, from_logits)
+            model = utils.getModel(model_name, dataset_conf, from_logits)
             # Compile and train the model
             model.compile(loss=CategoricalCrossentropy(from_logits=from_logits), optimizer=Adam(learning_rate=lr), metrics=['accuracy'])          
 
@@ -198,7 +140,7 @@ def train(dataset_conf, train_conf, results_path):
         # Plot Learning curves 
         if (LearnCurves == True):
             print('Plot Learning Curves ....... ')
-            draw_learning_curves(bestTrainingHistory, sub+1)
+            utils.draw_learning_curves(bestTrainingHistory, sub+1)
           
     # Get the current 'OUT' time to calculate the overall training time
     out_exp = time.time()
@@ -259,7 +201,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
         # Iteration over runs (seeds) 
         for seed in range(len(runs)): 
             # Load the model of the seed.
-            model.load_weights('{}/saved models/{}/subject-{}.h5'.format(results_path, runs[seed], sub+1))
+            model.load_weights('{}/saved models/{}/subject-{}.weights.h5'.format(results_path, runs[seed], sub+1))
             
             inference_time = time.time()
             # Predict MI task
@@ -301,106 +243,66 @@ def test(model, dataset_conf, results_path, allRuns = True):
     log_write.write(info+'\n')
          
     # Draw a performance bar chart for all subjects 
-    draw_performance_barChart(n_sub, acc.mean(1), 'Accuracy')
-    draw_performance_barChart(n_sub, kappa.mean(1), 'k-score')
+    utils.draw_performance_barChart(n_sub, acc.mean(1), 'Accuracy')
+    utils.draw_performance_barChart(n_sub, kappa.mean(1), 'k-score')
     # Draw confusion matrix for all subjects (average)
-    draw_confusion_matrix(cf_matrix.mean((0,1)), 'All', results_path, classes_labels)
+    utils.draw_confusion_matrix(cf_matrix.mean((0,1)), 'All', results_path, classes_labels)
     # Close opened file    
     log_write.close() 
     
     
 #%%
-def getModel(model_name, dataset_conf, from_logits = False):
-    
-    n_classes = dataset_conf.get('n_classes')
-    n_channels = dataset_conf.get('n_channels')
-    in_samples = dataset_conf.get('in_samples')
-
-    # Select the model
-    if(model_name == 'ATCNet'):
-        # Train using the proposed ATCNet model: https://ieeexplore.ieee.org/document/9852687
-        model = models.ATCNet_( 
-            # Dataset parameters
-            n_classes = n_classes, 
-            in_chans = n_channels, 
-            in_samples = in_samples, 
-            # Sliding window (SW) parameter
-            n_windows = 5, 
-            # Attention (AT) block parameter
-            attention = 'mha', # Options: None, 'mha','mhla', 'cbam', 'se'
-            # Convolutional (CV) block parameters
-            eegn_F1 = 16,
-            eegn_D = 2, 
-            eegn_kernelSize = 64,
-            eegn_poolSize = 7,
-            eegn_dropout = 0.3,
-            # Temporal convolutional (TC) block parameters
-            tcn_depth = 2, 
-            tcn_kernelSize = 4,
-            tcn_filters = 32,
-            tcn_dropout = 0.3, 
-            tcn_activation='elu',
-            )     
-    elif(model_name == 'TCNet_Fusion'):
-        # Train using TCNet_Fusion: https://doi.org/10.1016/j.bspc.2021.102826
-        model = models.TCNet_Fusion(n_classes = n_classes, Chans=n_channels, Samples=in_samples)      
-    elif(model_name == 'EEGTCNet'):
-        # Train using EEGTCNet: https://arxiv.org/abs/2006.00622
-        model = models.EEGTCNet(n_classes = n_classes, Chans=n_channels, Samples=in_samples)          
-    elif(model_name == 'EEGNet'):
-        # Train using EEGNet: https://arxiv.org/abs/1611.08024
-        model = models.EEGNet_classifier(n_classes = n_classes, Chans=n_channels, Samples=in_samples) 
-    elif(model_name == 'EEGNeX'):
-        # Train using EEGNeX: https://arxiv.org/abs/2207.12369
-        model = models.EEGNeX_8_32(n_timesteps = in_samples , n_features = n_channels, n_outputs = n_classes)
-    elif(model_name == 'DeepConvNet'):
-        # Train using DeepConvNet: https://doi.org/10.1002/hbm.23730
-        model = models.DeepConvNet(nb_classes = n_classes , Chans = n_channels, Samples = in_samples)
-    elif(model_name == 'ShallowConvNet'):
-        # Train using ShallowConvNet: https://doi.org/10.1002/hbm.23730
-        model = models.ShallowConvNet(nb_classes = n_classes , Chans = n_channels, Samples = in_samples)
-    elif(model_name == 'MBEEG_SENet'):
-        # Train using MBEEG_SENet: https://www.mdpi.com/2075-4418/12/4/995
-        model = models.MBEEG_SENet(nb_classes = n_classes , Chans = n_channels, Samples = in_samples)
-
-    else:
-        raise Exception("'{}' model is not supported yet!".format(model_name))
-
-    return model
-    
-#%%
 def run():
     # Define dataset parameters
-    dataset = 'BCI2a' 
-
-    in_samples = 1125
-    n_channels = 22
-    n_sub = 9
-    n_classes = 4
-    classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
-    data_path = os.path.expanduser('~') + '/datasets/BCIC2a/raw/'
+    dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
+    print(os.getcwd())
+    if dataset == 'BCI2a': 
+        in_samples = 1125
+        n_channels = 22
+        n_sub = 9
+        n_classes = 4
+        classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
+        data_path = './datasets/BCI2a/raw/'
+    elif dataset == 'HGD': 
+        in_samples = 1125
+        n_channels = 44
+        n_sub = 14
+        n_classes = 4
+        classes_labels = ['Right Hand', 'Left Hand','Rest','Feet']     
+        data_path = os.path.expanduser('~') + '/mne_data/MNE-schirrmeister2017-data/robintibor/high-gamma-dataset/raw/master/data/'
+    elif dataset == 'CS2R': 
+        in_samples = 1125
+        # in_samples = 576
+        n_channels = 32
+        n_sub = 18
+        n_classes = 3
+        # classes_labels = ['Fingers', 'Wrist','Elbow','Rest']     
+        classes_labels = ['Fingers', 'Wrist','Elbow']     
+        # classes_labels = ['Fingers', 'Elbow']     
+        data_path = os.path.expanduser('~') + '/CS2R MI EEG dataset/all/EDF - Cleaned - phase one (remove extra runs)/two sessions/'
+    else:
+        raise Exception("'{}' dataset is not supported yet!".format(dataset))
         
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results"
-    if not  os.path.exists(results_path):
+    if not os.path.exists(results_path):
       os.makedirs(results_path)   # Create a new directory if it does not exist 
       
     # Set dataset paramters 
     dataset_conf = { 'name': dataset, 'n_classes': n_classes, 'cl_labels': classes_labels,
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
-                    'data_path': data_path, 'isStandard': True, 'LOSO': False}
+                    'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 64, 'epochs': 500, 'patience': 100, 'lr': 0.001,'n_train': 1,
+    train_conf = { 'batch_size': 64, 'epochs': 100, 'patience': 100, 'lr': 0.001,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
            
     # Train the model
     # train(dataset_conf, train_conf, results_path)
 
     # Evaluate the model based on the weights saved in the '/results' folder
-    model = getModel(train_conf.get('model'), dataset_conf)
+    model = utils.getModel(train_conf.get('model'), dataset_conf)
     test(model, dataset_conf, results_path)    
 
 #%%
 if __name__ == "__main__":
     run()
-    

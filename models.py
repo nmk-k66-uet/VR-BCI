@@ -1,21 +1,3 @@
-""" 
-Copyright (C) 2022 King Saud University, Saudi Arabia 
-SPDX-License-Identifier: Apache-2.0 
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the 
-License at
-
-http://www.apache.org/licenses/LICENSE-2.0  
-
-Unless required by applicable law or agreed to in writing, software distributed
-under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR 
-CONDITIONS OF ANY KIND, either express or implied. See the License for the
-specific language governing permissions and limitations under the License. 
-
-Author:  Hamdi Altaheri 
-"""
-
 #%%
 import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
@@ -343,7 +325,6 @@ def TCNet_Fusion(n_classes, Chans=22, Samples=1125, layers=2, kernel_s=4, filt=1
     
     return Model(inputs=input1,outputs=softmax)
 
-
 #%% Reproduced EEGTCNet model: https://arxiv.org/abs/2006.00622
 def EEGTCNet(n_classes, Chans=22, Samples=1125, layers=2, kernel_s=4, filt=12, dropout=0.3, activation='elu', F1=8, D=2, kernLength=32, dropout_eeg=0.2):
     """ EEGTCNet model from Ingolfsson et al 2020.
@@ -421,8 +402,6 @@ def MBEEG_SENet(nb_classes, Chans, Samples, D=2):
     softmax = Activation('softmax', name = 'softmax')(dense1)
     
     return Model(inputs=input1,outputs=softmax)
-
-
 
 #%% Reproduced EEGNeX model: https://arxiv.org/abs/2207.12369
 def EEGNeX_8_32(n_timesteps, n_features, n_outputs):
@@ -523,7 +502,6 @@ def EEGNet(input_layer, F1=8, kernLength=64, D=2, Chans=22, dropout=0.25):
     block3 = AveragePooling2D((8,1),data_format='channels_last')(block3)
     block3 = Dropout(dropout)(block3)
     return block3
-
 
 #%% Reproduced DeepConvNet model: https://doi.org/10.1002/hbm.23730
 def DeepConvNet(nb_classes, Chans = 64, Samples = 256,
