@@ -252,7 +252,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
     
     
 #%%
-def run():
+def run(mode = "Train"):
     # Define dataset parameters
     dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
     print(os.getcwd())
@@ -282,27 +282,30 @@ def run():
         data_path = os.path.expanduser('~') + '/CS2R MI EEG dataset/all/EDF - Cleaned - phase one (remove extra runs)/two sessions/'
     else:
         raise Exception("'{}' dataset is not supported yet!".format(dataset))
-        
-    # Create a folder to store the results of the experiment
-    results_path = os.getcwd() + "/results"
-    if not os.path.exists(results_path):
-      os.makedirs(results_path)   # Create a new directory if it does not exist 
-      
+           
     # Set dataset paramters 
     dataset_conf = { 'name': dataset, 'n_classes': n_classes, 'cl_labels': classes_labels,
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
     train_conf = { 'batch_size': 64, 'epochs': 100, 'patience': 100, 'lr': 0.001,'n_train': 1,
-                  'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
-           
-    # Train the model
-    # train(dataset_conf, train_conf, results_path)
+                  'LearnCurves': True, 'from_logits': False, 'model':'EEGNet'}
 
-    # Evaluate the model based on the weights saved in the '/results' folder
-    model = utils.getModel(train_conf.get('model'), dataset_conf)
-    test(model, dataset_conf, results_path)    
+    # Create a folder to store the results of the experiment
+    results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model'))
+    if not os.path.exists(results_path):
+      os.makedirs(results_path)   # Create a new directory if it does not exist 
+
+    if mode == "Train":
+        # Train the model
+        train(dataset_conf, train_conf, results_path)
+    elif mode == "Test":
+        # Evaluate the model based on the weights saved in the '/results' folder
+        model = utils.getModel(train_conf.get('model'), dataset_conf)
+        test(model, dataset_conf, results_path)
+    else:
+        print("Invalid command!") 
 
 #%%
 if __name__ == "__main__":
-    run()
+    run("Test")
