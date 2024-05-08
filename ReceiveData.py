@@ -7,9 +7,21 @@ print("looking for a stream...")
 streams = resolve_stream('type', 'EEG') # You can try other stream types such as: EEG, EEG-Quality, Contact-Quality, Performance-Metrics, Band-Power
 print(streams)
 
+ch_lst = {['CMS', 'TP9'],
+          ['DRL', 'TP10'],
+          ['LL', 'FCz'],
+          ['LM', 'C3'],
+          ['LO', 'C1'],
+          ['LP', 'C5'],
+          ['RL', 'Cz'],
+          ['RM', 'C4'],
+          ['RN', 'CPz'],
+          ['RO', 'C2'],
+          ['RP', 'C6']}
+
 # create a new inlet to read from the stream
 inlet = StreamInlet(streams[0])
-print(inlet)
+print(inlet.)
 
 # while True:
 #     # Returns a tuple (sample,timestamp) where sample is a list of channel values and timestamp is the capture time of the sample on the remote machine,
