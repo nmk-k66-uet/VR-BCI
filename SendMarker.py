@@ -10,7 +10,7 @@ import csv
 def main():
 
     # Set up LabStreamingLayer stream.
-    info = StreamInfo(name='PyMarker', type='Markers', channel_count=3,
+    info = StreamInfo(name='VR-BCI', type='Markers', channel_count=3,
                       channel_format='double64', source_id='unique113')
 
     # Broadcast the stream.       
