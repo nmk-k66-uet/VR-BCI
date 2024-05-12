@@ -213,7 +213,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
             kappa[sub, seed] = cohen_kappa_score(labels, y_pred)
             # Calculate and draw confusion matrix
             cf_matrix[sub, seed, :, :] = confusion_matrix(labels, y_pred, normalize='true')
-            # draw_confusion_matrix(cf_matrix[sub, seed, :, :], str(sub+1), results_path, classes_labels)
+            utils.draw_confusion_matrix(cf_matrix[sub, seed, :, :], str(sub+1), results_path, classes_labels)
         
     # Print & write the average performance measures for all subjects     
     head1 = head2 = '                  '
@@ -288,8 +288,8 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 64, 'epochs': 100, 'patience': 100, 'lr': 0.001,'n_train': 1,
-                  'LearnCurves': True, 'from_logits': False, 'model':'EEGNet'}
+    train_conf = { 'batch_size': 64, 'epochs': 1000, 'patience': 300, 'lr': 0.0009,'n_train': 1,
+                  'LearnCurves': False, 'from_logits': False, 'model':'ATCNet'}
 
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model'))
@@ -308,4 +308,5 @@ def run(mode = "Train"):
 
 #%%
 if __name__ == "__main__":
+    # run("Train")
     run("Test")
