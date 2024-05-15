@@ -17,7 +17,7 @@ def ATCNet_(n_classes, in_chans = 22, in_samples = 1125, n_windows = 5, attentio
            eegn_F1 = 16, eegn_D = 2, eegn_kernelSize = 64, eegn_poolSize = 7, eegn_dropout=0.3, 
            tcn_depth = 2, tcn_kernelSize = 4, tcn_filters = 32, tcn_dropout = 0.3, 
            tcn_activation = 'elu', fuse = 'average'):
-    
+    # sửa in_chans = 3, in_samples = 500
     """ ATCNet model from Altaheri et al 2023.
         See details at https://ieeexplore.ieee.org/abstract/document/9852687
     

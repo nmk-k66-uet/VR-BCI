@@ -59,9 +59,11 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
     """ Loading and Dividing of the data set based on the subject-specific 
     (subject-dependent) approach.
     In this approach, we used the same training and testing dataas the original
-    competition, i.e., 288 x 9 trials in session 1 for training, 
-    and 288 x 9 trials in session 2 for testing.  
-   
+    competition, i.e.:
+    - A total of 9 subjects, 2 sessions for each subject
+    - 48 trials x 6 runs in session 1 for training, 
+    and 48 trials x 6 runs in session 2 for testing, yielding a total of 288 trials per session.  
+    288 
         Parameters
         ----------
         data_path: string
