@@ -108,3 +108,30 @@ def getModel(model_name, dataset_conf, from_logits = False):
         raise Exception("'{}' model is not supported yet!".format(model_name))
 
     return model
+
+def get_ATCNet():
+
+    model = models.ATCNet_( 
+        # Dataset parameters
+        n_classes = 4, 
+        in_chans = 9, 
+        in_samples = 512, 
+        # Sliding window (SW) parameter
+        n_windows = 5, 
+        # Attention (AT) block parameter
+        attention = 'mha', # Options: None, 'mha','mhla', 'cbam', 'se'
+        # Convolutional (CV) block parameters
+        eegn_F1 = 16,
+        eegn_D = 2, 
+        eegn_kernelSize = 64,
+        eegn_poolSize = 7,
+        eegn_dropout = 0.3,
+        # Temporal convolutional (TC) block parameters
+        tcn_depth = 2, 
+        tcn_kernelSize = 4,
+        tcn_filters = 32,
+        tcn_dropout = 0.3, 
+        tcn_activation='elu',
+        )
+    
+    return model
