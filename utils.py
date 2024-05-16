@@ -10,21 +10,23 @@ from sklearn.metrics import cohen_kappa_score
 import models
 
 #%% Learning Curves PLT
-def draw_learning_curves(history, sub):
+def draw_learning_curves(history, sub, results_path):
     plt.plot(history.history['accuracy'])
     plt.plot(history.history['val_accuracy'])
     plt.title('Model accuracy - subject: ' + str(sub))
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'val'], loc='upper left')
-    plt.show()
+    # plt.show()
+    plt.savefig(results_path + '/subject_' + sub + '.png')
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('Model loss - subject: ' + str(sub))
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.legend(['Train', 'val'], loc='upper left')
-    plt.show()
+    # plt.show()
+    plt.savefig(results_path + '/subject_' + sub + '.png')
     plt.close()
 
 #%% Confusion Matrix PLT
@@ -37,7 +39,7 @@ def draw_confusion_matrix(cf_matrix, sub, results_path, classes_labels):
     disp.ax_.set_xticklabels(display_labels, rotation=12)
     plt.title('Confusion Matrix of Subject: ' + sub )
     plt.savefig(results_path + '/subject_' + sub + '.png')
-    plt.show()
+    # plt.show()
 
 #%%
 def draw_performance_barChart(num_sub, metric, label):

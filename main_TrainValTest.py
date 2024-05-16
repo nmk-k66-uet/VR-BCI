@@ -67,7 +67,7 @@ def train(dataset_conf, train_conf, results_path):
         
         # Get training and test data
         X_train, _, y_train_onehot, _, _, _ = get_data(
-            data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard)
+            data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard, isShuffle=False)
          
         # Divide the training data into training and validation
         X_train, X_val, y_train_onehot, y_val_onehot = train_test_split(X_train, y_train_onehot, test_size=0.2, random_state=42)       
@@ -141,7 +141,7 @@ def train(dataset_conf, train_conf, results_path):
         # Plot Learning curves 
         if (LearnCurves == True):
             print('Plot Learning Curves ....... ')
-            utils.draw_learning_curves(bestTrainingHistory, sub+1)
+            utils.draw_learning_curves(bestTrainingHistory, sub+1, results_path)
           
     # Get the current 'OUT' time to calculate the overall training time
     out_exp = time.time()
@@ -197,7 +197,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
     inference_time = 0 #  inference_time: classification time for one trial
     for sub in range(n_sub): # (num_sub): for all subjects, (i-1,i): for the ith subject.
         # Load data
-        _, _, _, X_test, _, y_test_onehot = get_data(data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard)     
+        _, _, _, X_test, _, y_test_onehot = get_data(data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard, isShuffle=False)     
 
         # Iteration over runs (seeds) 
         for seed in range(len(runs)): 
@@ -244,8 +244,8 @@ def test(model, dataset_conf, results_path, allRuns = True):
     log_write.write(info+'\n')
          
     # Draw a performance bar chart for all subjects 
-    utils.draw_performance_barChart(n_sub, acc.mean(1), 'Accuracy')
-    utils.draw_performance_barChart(n_sub, kappa.mean(1), 'k-score')
+    # utils.draw_performance_barChart(n_sub, acc.mean(1), 'Accuracy')
+    # utils.draw_performance_barChart(n_sub, kappa.mean(1), 'k-score')
     # Draw confusion matrix for all subjects (average)
     utils.draw_confusion_matrix(cf_matrix.mean((0,1)), 'All', results_path, classes_labels)
     # Close opened file    
@@ -289,8 +289,8 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 16, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
-                  'LearnCurves': True, 'from_logits': False, 'model':'EEGTCNet'}
+    train_conf = { 'batch_size': 8, 'epochs': 1000, 'patience': 300, 'lr': 0.001,'n_train': 1,
+                  'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
 
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model'))
