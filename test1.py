@@ -82,7 +82,7 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
             #     print("Trial :", trial)
             #     print("Index: ", int(a_trial[trial]), int(a_trial[trial])+window_Length)
             for i in selected_channels:
-                temp.append(downsample(a_X[int(a_trial[trial]):(int(a_trial[trial])+org_window_Length),i]))
+                temp.append(downsample(a_X[int(a_trial[trial]):(int(a_trial[trial])+org_window_Length),i-1]))
                 # print(type(temp[0][0]))
             temp = np.array(temp)
             # print(temp.shape)
@@ -90,15 +90,15 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
             # print(data_return[NO_valid_trial,:,:].shape)
             data_return[NO_valid_trial,:,:] = np.array(temp)
             # print("Data_return: ", data_return[NO_valid_trial, :,:])
-            label_return[NO_valid_trial] = int(a_y[trial]) - 1
+            label_return[NO_valid_trial] = int(a_y[trial])
             # print("label_return: ", label_return[NO_valid_trial])
             NO_valid_trial +=1      
             
 
     data_return = data_return[0:NO_valid_trial, :, t_1:t_2]
     # print(data_return.shape)
-    # label_return = label_return[0:NO_valid_trial]
-    # label_return = (label_return-1).astype(int)
+    label_return = label_return[0:NO_valid_trial]
+    label_return = (label_return-1).astype(int)
     # print(label_return.shape)
 
     return data_return, label_return

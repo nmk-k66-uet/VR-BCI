@@ -256,7 +256,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
 def run(mode = "Train"):
     # Define dataset parameters
     dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
-    print(os.getcwd())
+    # print(os.getcwd())
     if dataset == 'BCI2a': 
         in_samples = 512
         n_channels = 9
@@ -289,8 +289,8 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 32, 'epochs': 200, 'patience': 300, 'lr': 0.0009,'n_train': 1,
-                  'LearnCurves': False, 'from_logits': False, 'model':'ATCNet'}
+    train_conf = { 'batch_size': 16, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
+                  'LearnCurves': True, 'from_logits': False, 'model':'EEGTCNet'}
 
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model'))
