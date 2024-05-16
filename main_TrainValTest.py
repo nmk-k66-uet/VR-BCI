@@ -289,7 +289,7 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 8, 'epochs': 1000, 'patience': 300, 'lr': 0.001,'n_train': 1,
+    train_conf = { 'batch_size': 16, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
 
     # Create a folder to store the results of the experiment
