@@ -259,7 +259,7 @@ def run(mode = "Train"):
     # print(os.getcwd())
     if dataset == 'BCI2a': 
         in_samples = 512
-        n_channels = 9
+        n_channels = 22
         n_sub = 9
         n_classes = 4
         classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
@@ -289,7 +289,7 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 16, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
+    train_conf = { 'batch_size': 32, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
 
     # Create a folder to store the results of the experiment

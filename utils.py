@@ -18,7 +18,7 @@ def draw_learning_curves(history, sub, results_path):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'val'], loc='upper left')
     # plt.show()
-    plt.savefig(results_path + '/subject_' + sub + '.png')
+    plt.savefig(results_path + '/subject_' + str(sub) + '.png')
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('Model loss - subject: ' + str(sub))
@@ -26,7 +26,7 @@ def draw_learning_curves(history, sub, results_path):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'val'], loc='upper left')
     # plt.show()
-    plt.savefig(results_path + '/subject_' + sub + '.png')
+    plt.savefig(results_path + '/subject_' + str(sub) + '.png')
     plt.close()
 
 #%% Confusion Matrix PLT
@@ -37,8 +37,8 @@ def draw_confusion_matrix(cf_matrix, sub, results_path, classes_labels):
                                 display_labels=display_labels)
     disp.plot()
     disp.ax_.set_xticklabels(display_labels, rotation=12)
-    plt.title('Confusion Matrix of Subject: ' + sub )
-    plt.savefig(results_path + '/subject_' + sub + '.png')
+    plt.title('Confusion Matrix of Subject: ' + str(sub))
+    plt.savefig(results_path + '/subject_' + str(sub) + '.png')
     # plt.show()
 
 #%%

@@ -56,7 +56,7 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
     t_2 = int(6*128)
 
     label_return = np.zeros(n_tests)
-    data_return = np.zeros((n_tests, len(selected_channels), window_Length))
+    data_return = np.zeros((n_tests, total_channels, window_Length))
 
     NO_valid_trial = 0
     if training:
@@ -81,8 +81,8 @@ def load_BCI2a_data(data_path, subject, training, all_trials = True):
             # if all_trials == True:
             #     print("Trial :", trial)
             #     print("Index: ", int(a_trial[trial]), int(a_trial[trial])+window_Length)
-            for i in selected_channels:
-                temp.append(downsample(a_X[int(a_trial[trial]):(int(a_trial[trial])+org_window_Length),i-1]))
+            for i in range(total_channels):
+                temp.append(downsample(a_X[int(a_trial[trial]):(int(a_trial[trial])+org_window_Length),i]))
                 # print(type(temp[0][0]))
             temp = np.array(temp)
             # print(temp.shape)
