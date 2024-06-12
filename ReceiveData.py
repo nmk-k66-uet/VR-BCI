@@ -1,43 +1,37 @@
-"""Example program to show how to read a multi-channel time series from LSL."""
-import time
+import collections
+import socket
 from pylsl import StreamInlet, resolve_stream
 from sklearn.preprocessing import StandardScaler
 import utils
-import os
-import sys
-import shutil
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import CategoricalCrossentropy
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-from sklearn.metrics import confusion_matrix, accuracy_score, ConfusionMatrixDisplay
-from sklearn.metrics import cohen_kappa_score
-from sklearn.model_selection import train_test_split
-
-import models 
-# from preprocess import get_data
-from test import get_data
-# from keras.utils.vis_utils import plot_model
+import keyboard
+import time
 
 # Set dataset paramters 
 dataset_conf = { 'name': 'BCI2a', 'n_classes': 4, 'cl_labels': ['Left hand', 'Right hand', 'Foot', 'Tongue'],
-                    'n_sub': 9, 'n_channels': 9, 'in_samples': 512,
+                    'n_sub': 9, 'n_channels': 22, 'in_samples': 512,
                     'data_path': './datasets/BCI2a/raw/', 'isStandard': True, 'LOSO': True}
-
-model = utils.getModel('EEGTCNet', dataset_conf)
-model.load_weights('./results_EEGTCNet/saved models/run-1/subject-1.weights.h5')
+# Load model weight
+model = utils.getModel('ATCNet', dataset_conf)
+model.load_weights('./best_model/subject-8.weights.h5')
 
 print("looking for a stream...")
 # first resolve a EEG stream on the lab network
-streams = resolve_stream('type', 'EEG') # You can try other stream types such as: EEG, EEG-Quality, Contact-Quality, Performance-Metrics, Band-Power
+streams = resolve_stream('type', 'EEG') # Currently EMOTIV EPOC Flex supports: EEG, Motion
 print(streams)
+# create a new inlet to read from the stream
+inlet = StreamInlet(streams[0])
 
 data = []
-
 t1 = 0
 t2 = 512
+counter = 0
+sample_count = 0
+queue = False
+label_count = 0
+group = []
+started = False
 
 def standardize_data(data, channels): 
     # X_train & X_test :[Trials, MI-tasks, Channels, Time points]
@@ -48,74 +42,89 @@ def standardize_data(data, channels):
     return data
 
 def data_converter(data):
-    data_return = np.zeros((1, 9, 512))
+    data_return = np.zeros((1, 22, 512))
     data_return[0, :, :] = np.transpose(np.array(data))
     data_return = data_return[0:1, :, t1:t2]
     N_tr, N_ch, T = data_return.shape
     data_return = data_return.reshape(N_tr, 1, N_ch, T)
     return data_return
 
+def labelManipulate(label):
+    res = 0
+    temp = 0
+    if label[0][0] >= 0.3 and label[0][1] >= 0.3:
+        temp = max(label[0][0], label[0][1])
+        if temp == label[0][0]:
+            res = "0"
+        else:
+            res = "1"
+    else:
+        res = str(label.argmax(axis = -1)[0])
+    return res
 
-# ch_lst = [['CMS', 'TP9'],3
-#           ['DRL', 'TP10'],4
-#           ['LL', 'FCz'],5
-#           ['LM', 'C3'],6
-#           ['LO', 'C1'],7
-#           ['LP', 'C5'],8
-#           ['RL', 'Cz'],9
-#           ['RM', 'C4'],10
-#           ['RN', 'CPz'],11
-#           ['RO', 'C2'],12
-#           ['RP', 'C6']]13
+def mostFrequentLabels(group):
+    counter = collections.Counter(group)
+    res = counter.most_common(1)
+    return res[0][0]
 
-# create a new inlet to read from the stream
-inlet = StreamInlet(streams[0])
+# Establish TCP connection
+HOST = "192.168.137.1"
+PORT = 8000
 
-f = open("log.txt", "w")
+# log_write = open("log.txt", "w")
 
-data = []
-data_return = np.zeros((1, 9, 512))
-t1 = 0
-t2 = 512
-
-second = 0
-counter = 0
-sample_count = 0
-queue = False
-label_count = 0
-
-while True:
-    # Returns a tuple (sample,timestamp) where sample is a list of channel values and timestamp is the capture time of the sample on the remote machine,
-    # or (None,None) if no new sample was available
-    sample, timestamp = inlet.pull_sample()
-    if timestamp != None:
-        # f.write("EEG Data" + '\n')
-        # f.write(str(sample) + '\n')
-        # print(sample)
-        values = [sample[5], sample[8], sample[6], sample[7], sample[9], sample[12], sample[10], sample[13], sample[11]]
-        if queue == True:
-            data.pop(0)
-        data.append(values)
-        # f.write("Motion Data" + '\n')
-        # f.write(str(sample2) + '\n')
-        counter += 1
-        sample_count += 1
-        print("Sample_count: ", sample_count)
-    if counter == 128:
-        second += 1
-        # f.write("Index of chunk: " + str(second) + '\n')
-        counter = 0
-    if sample_count == 512:
-        data_return = standardize_data(data_converter(data), 9)
-        label = model.predict(data_return).argmax(axis=-1)
-        print(label)
-        label_count += 1
-        sample_count -= 128
-        queue = True
-    if label_count == 10:
-        break
-
-# label = model.predict(data_return)
-# print(label)
-label = model.predict(data_return).argmax(axis=-1)
-print(label)
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen()
+    conn, addr = s.accept()
+    with conn:
+        print(f"Connected by {addr}")
+        while True:
+            # event = keyboard.read_event(suppress=True)
+            # if event.event_type == keyboard.KEY_DOWN:
+            #     if event.name == "s":
+            #         if started == False:
+            #             started = True
+            #             print("Server has started!")
+            #         else:
+            #             started = False
+            #             print("Server is on pause!")
+            #     elif event.name == "q":
+            #         print("Quitting Program!")
+            #         break
+            # if started == True:
+            # time.sleep(1/128)
+            sample, timestamp = inlet.pull_sample()
+            if timestamp != None:
+                values = [sample[3], sample[4], 
+                        sample[5], sample[14], 
+                        sample[15], sample[16], 
+                        sample[6], sample[7], 
+                        sample[8], sample[9],
+                        sample[17], sample[18], 
+                        sample[19], sample[10], 
+                        sample[11], sample[22], 
+                        sample[21], sample[20],
+                        sample[12], sample[13],
+                        sample[23], sample[24]]
+                if queue == True:
+                    data.pop(0)
+                data.append(values)
+                sample_count += 1
+            if sample_count == 512:
+                data_return = standardize_data(data_converter(data), 22)
+                label = model.predict(data_return)
+                res = labelManipulate(label)
+                print(type(res))
+                group.append(res)
+                print("Predicted: " + str(len(group)) + "/10")
+                if len(group) == 10:
+                    temp = mostFrequentLabels(group)
+                    print(type(temp))
+                    conn.sendall(bytes(temp, 'utf-8'))
+                    print("Group: " + str(group))
+                    print("Res: " + str(temp))
+                    group = []
+                sample_count -= 128
+                queue = True
+    

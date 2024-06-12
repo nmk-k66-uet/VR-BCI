@@ -1,194 +1,145 @@
-import numpy as np
-import scipy.io as sio
-from tensorflow.keras.utils import to_categorical
+import collections
+import socket
+from pylsl import StreamInlet, resolve_stream
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils import shuffle
+import utils
+import numpy as np
+import tensorflow as tf
+import keyboard
+import time
+import datetime
 
-def load_data_LOSO (data_path, subject, dataset): 
-    # sub = 0
-    X_train, y_train = [], []
-    for sub in range (0,9):
-        print("Loading on data file no" + str(sub+1))
-        path = data_path+'s' + str(sub+1) + '/'
-        
-        if (dataset == 'BCI2a'):
-            X1, y1 = load_BCI2a_data(path, sub+1, True)
-            X2, y2 = load_BCI2a_data(path, sub+1, False)
-        
-        X = np.concatenate((X1, X2), axis=0)
-        y = np.concatenate((y1, y2), axis=0)
-                   
-        if (sub == subject):
-            X_test = X
-            y_test = y
-        elif (len(X_train) == 0):
-            X_train = X
-            y_train = y
-        else:
-            X_train = np.concatenate((X_train, X), axis=0)
-            y_train = np.concatenate((y_train, y), axis=0)
-    
-    # for sub in range (0,9):
-    # print("Loading on data file no" + str(sub+1))
-    # path = data_path+'s' + str(sub+1) + '/'
-    
-    # if (dataset == 'BCI2a'):
-    #     X1, y1 = load_BCI2a_data(path, sub+1, True)
-    #     X2, y2 = load_BCI2a_data(path, sub+1, False)
-    
-    # X = np.concatenate((X1, X2), axis=0)
-    # y = np.concatenate((y1, y2), axis=0)
-                
-    # if (sub == subject):
-    #     X_test = X
-    #     y_test = y
-    # elif (len(X_train) == 0):
-    #     X_train = X
-    #     y_train = y
-    # else:
-    #     X_train = np.concatenate((X_train, X), axis=0)
-    #     y_train = np.concatenate((y_train, y), axis=0)
+# Set dataset paramters 
+dataset_conf = { 'name': 'BCI2a', 'n_classes': 4, 'cl_labels': ['Left hand', 'Right hand', 'Foot', 'Tongue'],
+                    'n_sub': 9, 'n_channels': 22, 'in_samples': 512,
+                    'data_path': './datasets/BCI2a/raw/', 'isStandard': True, 'LOSO': True}
+# Load model weight
+model = utils.getModel('ATCNet', dataset_conf)
+model.load_weights('./best_model/subject-8.weights.h5')
 
-    return X_train, y_train, X_test, y_test
+print("looking for a stream...")
+# first resolve a EEG stream on the lab network
+streams = resolve_stream('type', 'EEG') # Currently EMOTIV EPOC Flex supports: EEG, Motion
+print(streams)
+# create a new inlet to read from the stream
+inlet = StreamInlet(streams[0])
 
+# Data variable
+# Channel List
+# "CMS": "TP9",
+# "DRL": "TP10",
+# "LA": "Fz",
+# "LB": "FC3",
+# "LC": "FC1",
+# "LD": "C5",
+# "LE": "C3",
+# "LF": "C1",
+# "LG": "Cz",
+# "LH": "CP3",
+# "LJ": "CP1",
+# "LK": "P1",
+# "LL": "Pz",
+# "RA": "FCz",
+# "RB": "FC2",
+# "RC": "FC4",
+# "RD": "C2",
+# "RE": "C4",
+# "RF": "C6",
+# "RG": "CP4",
+# "RH": "CP2",
+# "RJ": "CPz",
+# "RK": "P2",
+# "RL": "POz"
+data = []
+t1 = 0
+t2 = 512
+counter = 0
+sample_count = 0
+queue = False
+group = []
+started = False
 
-#%%
-def load_BCI2a_data(data_path, subject, training, all_trials = True):
-    # Define MI-trials parameters
-    total_channels = 22
-    # for this approach we selects data from 3 channels: C3, Cz, C4
-    # these channels'indexes are as follow respectively
-    selected_channels = [8, 10, 12]
-    n_tests = 6*48*2  
-    window_Length = 7*250 
-    
-    # Define MI trial window 
-    fs = 250          # sampling rate
-    t1 = int(1.5*fs)  # start time_point
-    t2 = int(6*fs)    # end time_point
-    t_1 = int(2*(fs/2))
-    t_2 = int(6*(fs/2))
-
-    label_return = np.zeros(n_tests)
-    data_return = np.zeros((n_tests, len(selected_channels), window_Length//2))
-
-    NO_valid_trial = 0
-    if training:
-        a = sio.loadmat(data_path+'A0'+str(subject)+'T.mat')
-    else:
-        a = sio.loadmat(data_path+'A0'+str(subject)+'E.mat')
-    a_data = a['data']
-    for ii in range(0,a_data.size):
-        a_data1 = a_data[0,ii]
-        a_data2= [a_data1[0,0]]
-        a_data3= a_data2[0]
-        a_X         = a_data3[0]
-        a_trial     = a_data3[1]
-        a_y         = a_data3[2]
-        a_artifacts = a_data3[5]
-
-        for trial in range(0,a_trial.size):
-            if(a_artifacts[trial] != 0 and not all_trials):
-                continue
-            # print(a_X[int(a_trial[trial]):(int(a_trial[trial])+window_Length),:22].shape)
-            temp = []
-            # if all_trials == True:
-            #     print("Trial :", trial)
-            #     print("Index: ", int(a_trial[trial]), int(a_trial[trial])+window_Length)
-            for i in selected_channels:
-                temp.append(a_X[int(a_trial[trial]):(int(a_trial[trial])+window_Length),i])
-                # print(type(temp[0][0]))
-            temp = np.array(temp)
-            arr_even = temp[:, ::2]  # Columns at even indices
-            arr_odd = temp[:, 1::2]  # Columns at odd indices
-            # print(len(arr_even[0]))
-            # print(len(arr_odd[0]))
-            # print(np.array(temp).shape)
-            # print(np.transpose(np.array(temp)).shape)
-            # print(data_return[NO_valid_trial,:,:].shape)
-            data_return[NO_valid_trial,:,:] = np.array(arr_even)
-            # print("Data_return: ", data_return[NO_valid_trial, :,:])
-            label_return[NO_valid_trial] = int(a_y[trial]) - 1
-            # print("label_return: ", label_return[NO_valid_trial])
-            NO_valid_trial +=1
-            data_return[NO_valid_trial,:,:] = np.array(arr_odd)
-            # print("Data_return: ", data_return[NO_valid_trial, :,:])
-            label_return[NO_valid_trial] = int(a_y[trial]) - 1
-            # print("label_return: ", label_return[NO_valid_trial])
-            NO_valid_trial +=1        
-            
-
-    data_return = data_return[0:NO_valid_trial, :, t_1:t_2]
-    # print(data_return.shape)
-    # label_return = label_return[0:NO_valid_trial]
-    # label_return = (label_return-1).astype(int)
-    # print(label_return.shape)
-
-    return data_return, label_return
-
-def standardize_data(X_train, X_test, channels): 
+def standardize_data(data, channels): 
     # X_train & X_test :[Trials, MI-tasks, Channels, Time points]
     for j in range(channels):
           scaler = StandardScaler()
-          scaler.fit(X_train[:, 0, j, :])
-          X_train[:, 0, j, :] = scaler.transform(X_train[:, 0, j, :])
-          X_test[:, 0, j, :] = scaler.transform(X_test[:, 0, j, :])
+          scaler.fit(data[:, 0, j, :])
+          data[:, 0, j, :] = scaler.transform(data[:, 0, j, :])
+    return data
 
-    return X_train, X_test
+def data_converter(data):
+    data_return = np.zeros((1, 22, 512))
+    data_return[0, :, :] = np.transpose(np.array(data))
+    data_return = data_return[0:1, :, t1:t2]
+    N_tr, N_ch, T = data_return.shape
+    data_return = data_return.reshape(N_tr, 1, N_ch, T)
+    return data_return
 
-def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = False, isStandard = True, isShuffle = True):
-    
-    # Load and split the dataset into training and testing 
-    if LOSO:
-        """ Loading and Dividing of the dataset based on the 
-        'Leave One Subject Out' (LOSO) evaluation approach. """ 
-        X_train, y_train, X_test, y_test = load_data_LOSO(path, subject, dataset)
+def labelManipulate(label):
+    res = 0
+    temp = 0
+    if label[0][0] >= 0.3 and label[0][1] >= 0.3:
+        temp = max(label[0][0], label[0][1])
+        if temp == label[0][0]:
+            res = 0
+        else:
+            res = 1
     else:
-        """ Loading and Dividing of the data set based on the subject-specific 
-        (subject-dependent) approach.
-        In this approach, we used the same training and testing data as the original
-        competition, i.e., for BCI Competition IV-2a, 288 x 9 trials in session 1 
-        for training, and 288 x 9 trials in session 2 for testing.  
-        """
-        if (dataset == 'BCI2a'):
-            path = path + 's{:}/'.format(subject+1)
-            X_train, y_train = load_BCI2a_data(path, subject+1, True)
-            X_test, y_test = load_BCI2a_data(path, subject+1, False)
-    # shuffle the data 
-    if isShuffle:
-        X_train, y_train = shuffle(X_train, y_train,random_state=42)
-        X_test, y_test = shuffle(X_test, y_test,random_state=42)
-    # Prepare training data     
-    N_tr, N_ch, T = X_train.shape
-    X_train = X_train.reshape(N_tr, 1, N_ch, T)
-    print("Data per channel:")
-    print(X_train[0][0][0])
-    print("Data per label")
-    print(X_train[0][0])
-    print("Data per trial")
-    print(X_train[0])
-    print(len(y_train))
-    y_train_onehot = to_categorical(y_train)
-    # Prepare testing data 
-    N_tr, N_ch, T = X_test.shape 
-    X_test = X_test.reshape(N_tr, 1, N_ch, T)
-    y_test_onehot = to_categorical(y_test)    
+        res = label.argmax(axis = -1)[0]
+    return res
+
+def mostFrequentLabels(group):
+    counter = collections.Counter(group)
+    res = counter.most_common(1)
+    return res[0][0]
+
+# Establish TCP connection
+
+log_write = open("log.txt", "w")
+
+while True:
+    # time.sleep(1/128)
+    sample, timestamp = inlet.pull_sample()
+    # print(sample)
+    if timestamp != None:
+        # f.write("EEG Data" + '\n')
+        # f.write(str(sample) + '\n')
+        # print(sample)
+        values = [sample[3], sample[4], 
+                sample[5], sample[14], 
+                sample[15], sample[16], 
+                sample[6], sample[7], 
+                sample[8], sample[9],
+                sample[17], sample[18], 
+                sample[19], sample[10], 
+                sample[11], sample[22], 
+                sample[21], sample[20],
+                sample[12], sample[13],
+                sample[23], sample[24]]
+        if queue == True:
+            data.pop(0)
+        data.append(values)
+        # f.write("Motion Data" + '\n')
+        # f.write(str(sample2) + '\n')
+        sample_count += 1
+        # print("Sample_count: ", sample_count)
+    if sample_count == 512:
+        data_return = standardize_data(data_converter(data), 22)
+        # label = model.predict(data_return).argmax(axis=-1)
+        label = model.predict(data_return)
+        res = labelManipulate(label)
+        group.append(res)
+        print("Predicted: " + str(len(group)) + "/10")
+        if len(group) == 10:
+            curr = datetime.datetime.now()
+            print("Send: ", curr)
+            res = mostFrequentLabels(group)
+            # conn.send(bytes(str(res), 'utf-8'))
+            print("Group: " + str(group))
+            print("Res: " + str(res))
+            group = []
+            curr = datetime.datetime.now()
+            print("Reset: ", curr)            
+        sample_count -= 128
+        queue = True
     
-    # Standardize the data
-    if isStandard:
-        X_train, X_test = standardize_data(X_train, X_test, N_ch)
-
-    return X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot
-
-# X_train, y_train, X_test, y_test = load_data_LOSO('datasets/BCI2a/raw/', 0, 'BCI2a')
-# print(len(X_train))
-# print(len(y_train))
-# print(X_test.shape)
-# print(y_test.shape)
-
-# X_train, _, y_train_onehot, x_test, _, _ = get_data('datasets/BCI2a/raw/', 0, 'BCI2a', LOSO = True, isStandard = True)
-# print(X_train.shape)
-# print(y_train_onehot.shape)
-# print(x_test.shape)
-
-# data_return, class_return = load_BCI2a_data('datasets/BCI2a/raw/s1/', 1, True, True)
