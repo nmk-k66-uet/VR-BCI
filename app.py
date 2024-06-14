@@ -50,7 +50,7 @@ eeg_connection = CTk.CTkSwitch(home, text="Connect Emotiv Headset",
                                command=toggle_eeg_connection, variable=eeg_connection_flag,
                                onvalue=1, offvalue=0,
                                switch_width=48, switch_height=27)
-eeg_connection.pack(pady=20)
+eeg_connection.pack(pady=10)
 
 # VR Stream Attribute
 tcp_socket, conn, addr = None, None, None
@@ -76,7 +76,26 @@ vr_connection = CTk.CTkSwitch(home, text="Connect Oculus Headset",
                                command=toggle_vr_connection, variable=vr_connection_flag,
                                onvalue=1, offvalue=0,
                                switch_width=48, switch_height=27)
-vr_connection.pack(pady=30)
+vr_connection.pack(pady=10)
+
+# Patient information entry field
+def submit():
+    pass
+
+name_entry = CTk.CTkEntry(home, placeholder_text="Nhập tên bệnh nhân",
+                          height=40, width=240, font=("Arial", 18))
+name_entry.pack(pady=10)
+
+age_entry = CTk.CTkEntry(home, placeholder_text="Nhập tuổi bệnh nhân",
+                         height=40, width=240, font=("Arial", 18))
+age_entry.pack(pady=10)
+
+genders = ["Nam", "Nữ"]
+gender_options = CTk.CTkOptionMenu(home, values=genders)
+gender_options.pack(pady=10)
+
+submit_button = CTk.CTkButton(home, text="Submit", command=submit)
+submit_button.pack(side='right', anchor='center', pady=10)
 
 # Add elements to Settings Tab
 # Light and Dark Mode switch
