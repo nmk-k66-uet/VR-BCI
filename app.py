@@ -4,16 +4,14 @@ from pylsl import StreamInlet, resolve_stream
 import socket
 from socket import SHUT_RDWR
 import threading
+from enum import Enum
 
 CTk.set_appearance_mode("light")
 CTk.set_default_color_theme("green")
 server_running = False
 
 genders = ["Nam", "Nữ"]
-# Init main app
-# app = CTk.CTk()
 
-# VR Stream Attribute
 HOST, PORT = "127.0.0.1", 8000
 
 # Add elements to Settings Tab
@@ -59,14 +57,21 @@ class App(CTk.CTk):
         #-------------------------Home--------------------------#
         #EEG Stream connection
         self.eeg_stream = None #LSL Stream for emotiv connection
+        self.inlet = None #InletStream
 
         self.eeg_connection_flag = CTk.IntVar(value=0)
+
         def toggle_eeg_connection():
             if self.eeg_connection_flag.get() == 0:
                 self.eeg_stream = None
+                self.inlet = None
                 self.eeg_connection_switch.configure(text="Connect Emotiv Headset | Disconnected")
             else:
-                # eeg_stream = resolve_stream('type', 'EEG')
+                print("Looking for a stream...")
+                self.eeg_stream = resolve_stream('type', 'EEG')
+                self.inlet = StreamInlet(self.eeg_stream[0])
+                print(self.inlet)
+                # print(self.inlet.pull_sample())
                 self.eeg_connection_switch.configure(text="Connect Emotiv Headset | Connected")
         self.eeg_connection_switch = CTk.CTkSwitch(self.home, text="Connect Emotiv Headset",
                                     command=toggle_eeg_connection, variable=self.eeg_connection_flag,
@@ -141,9 +146,95 @@ class App(CTk.CTk):
         
         
         #----------------------Recording----------------------#
+        #TODO: Sesison configuration: actions per trial of sessions
+        #Configuration: duration of trial, rest time between trial,
+
+        #Run configuration stage:
+        # self.recording_scheme_per_run = [   (Action.R, 2), (Action.C, 2), (Action.LH, 4),
+        #                                     (Action.R, 2), (Action.C, 2), (Action.RH, 4),
+        #                                     (Action.R, 2), (Action.C, 2), (Action.LF, 4),
+        #                                     (Action.R, 2), (Action.C, 2), (Action.RF, 4) ]
         
+        self.recording_scheme_per_run = []
+        def add_action():
+            action_type = None
+            value = self.action_type_combo_box.get()
+            duration = self.action_duration_entry.get()
+            match value:
+                case "Nghỉ":
+                    action_type = Action.R
+                case "Gợi ý":
+                    action_type = Action.C
+                case "Tay trái":
+                    action_type = Action.LH
+                case "Tay phải":
+                    action_type = Action.RH
+                case "Chân trái":
+                    action_type = Action.LF
+                case "Chân phải":
+                    action_type = Action.RF
+            if (duration != ""):
+                action = (action_type, duration)
+                self.recording_scheme_per_run.append(action)
+                update_run_config() #add the last action added to the representition string
+            else:
+                show_error_message(self, "Thời lượng thực hiện hành động không xác định")
+
+        def remove_action():
+            if len(self.recording_scheme_per_run) != 0:
+                self.recording_scheme_per_run.pop()
+                update_run_config()
+            else: 
+                pass
+
+        def update_run_config(): 
+            cur = ""
+            for action in self.recording_scheme_per_run:
+                action_name = ""
+                match action[0]:
+                    case Action.R:
+                        action_name = "Nghỉ"
+                    case Action.C:
+                        action_name = "Gợi "
+                    case Action.LH:
+                        action_name = "Tay trái"
+                    case Action.RH:
+                        action_name = "Tay phải"
+                    case Action.LF:
+                        action_name = "Chân trái"
+                    case Action.RF:
+                        action_name = "Chân phải"
+                cur = action_name if (cur == "") else (cur + ", " + action_name)
+            print(self.recording_scheme_per_run)
+            self.run_config_label.configure(text=cur)
+            
         
+        self.action_type_combo_box = CTk.CTkComboBox(self.recording, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"])
+        self.action_type_combo_box.pack(pady=10)
+
+        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian (giây):")
+        self.action_duration_label.pack(pady=10)
+        self.action_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2",
+                                height=40, width=240, font=("Arial", 18))
+        self.action_duration_entry.pack(pady=10)
+
+        self.add_action_to_run_button = CTk.CTkButton(self.recording, text="+", command=add_action, height=40, width=40)
+        self.add_action_to_run_button.pack(padx=10)
+
+        self.remove_action_to_run_button = CTk.CTkButton(self.recording, text="-", command=remove_action, height=40, width=40)
+        self.remove_action_to_run_button.pack(padx=10)
+
+        self.run_config_label = CTk.CTkLabel(self.recording, text="")
+        self.run_config_label.pack(pady=10)
+        #Recording stage:
+        def start_recording():
+            if self.eeg_connection_flag.get() == 0:
+                show_error_message(self,"Không có kết nối với mũ thu EEG")
+            #else: Start recording based on run config
         
+        self.recording_button = CTk.CTkButton(self.recording, text="Start Recording", command=start_recording)
+        self.recording_button.pack(pady=10)
+
         #----------------------Settings----------------------#
         # Light and Dark Mode switch
         def switch_display_mode():
@@ -158,6 +249,24 @@ class App(CTk.CTk):
                                     onvalue=1, offvalue=0,
                                     switch_width=48, switch_height=27)
         self.display_mode_switch.pack(pady=20)
+        #----------------------Utils----------------------#
+        def show_error_message(self, error_message):
+            error_window = CTk.CTkToplevel(self)
+            error_window.title("Error")
+            error_window.geometry("300x200")
+
+            error_label = CTk.CTkLabel(error_window, text="Error", fg_color="red")
+            error_label.pack(pady=10)
+
+            message_label = CTk.CTkLabel(error_window, text=error_message, fg_color="red")
+            message_label.pack(pady=10)
+
+            ok_button = CTk.CTkButton(error_window, text="OK", command=error_window.destroy)
+            ok_button.pack(pady=10)
+        Action = Enum("Action", ["R", "C", "RH", "LH", "RF", "LF"])
+
+
+            
 
         
 # Main loop

@@ -14,8 +14,3 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         while True:
             conn.send(bytes(input(), 'utf-8'))
 
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-try {
-
-}

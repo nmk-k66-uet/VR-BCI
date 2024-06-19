@@ -2,7 +2,7 @@ import collections
 import socket
 from pylsl import StreamInlet, resolve_stream
 from sklearn.preprocessing import StandardScaler
-import utils
+import modelUtils
 import numpy as np
 import tensorflow as tf
 import keyboard
@@ -14,7 +14,7 @@ dataset_conf = { 'name': 'BCI2a', 'n_classes': 4, 'cl_labels': ['Left hand', 'Ri
                     'n_sub': 9, 'n_channels': 22, 'in_samples': 512,
                     'data_path': './datasets/BCI2a/raw/', 'isStandard': True, 'LOSO': True}
 # Load model weight
-model = utils.getModel('ATCNet', dataset_conf)
+model = modelUtils.getModel('ATCNet', dataset_conf)
 model.load_weights('./best_model/subject-8.weights.h5')
 
 print("looking for a stream...")

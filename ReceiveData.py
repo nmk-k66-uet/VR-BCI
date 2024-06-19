@@ -2,7 +2,7 @@ import collections
 import socket
 from pylsl import StreamInlet, resolve_stream
 from sklearn.preprocessing import StandardScaler
-import utils
+import modelUtils
 import numpy as np
 import tensorflow as tf
 import keyboard
@@ -11,9 +11,9 @@ import time
 # Set dataset paramters 
 dataset_conf = { 'name': 'BCI2a', 'n_classes': 4, 'cl_labels': ['Left hand', 'Right hand', 'Foot', 'Tongue'],
                     'n_sub': 9, 'n_channels': 22, 'in_samples': 512,
-                    'data_path': './datasets/BCI2a/raw/', 'isStandard': True, 'LOSO': True}
+                    'data_path': './datasets/BCI2a/raw/', 'isStandard': False, 'LOSO': True}
 # Load model weight
-model = utils.getModel('ATCNet', dataset_conf)
+model = modelUtils.getModel('ATCNet', dataset_conf)
 model.load_weights('./best_model/subject-8.weights.h5')
 
 print("looking for a stream...")
@@ -33,13 +33,13 @@ label_count = 0
 group = []
 started = False
 
-def standardize_data(data, channels): 
-    # X_train & X_test :[Trials, MI-tasks, Channels, Time points]
-    for j in range(channels):
-          scaler = StandardScaler()
-          scaler.fit(data[:, 0, j, :])
-          data[:, 0, j, :] = scaler.transform(data[:, 0, j, :])
-    return data
+# def standardize_data(data, channels): 
+#     # X_train & X_test :[Trials, MI-tasks, Channels, Time points]
+#     for j in range(channels):
+#           scaler = StandardScaler()
+#           scaler.fit(data[:, 0, j, :])
+#           data[:, 0, j, :] = scaler.transform(data[:, 0, j, :])
+#     return data
 
 def data_converter(data):
     data_return = np.zeros((1, 22, 512))

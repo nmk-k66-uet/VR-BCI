@@ -112,7 +112,6 @@ def getModel(model_name, dataset_conf, from_logits = False):
     return model
 
 def get_ATCNet():
-
     model = models.ATCNet_( 
         # Dataset parameters
         n_classes = 4, 

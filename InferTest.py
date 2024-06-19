@@ -3,7 +3,7 @@ import time
 import  UdpComms as U
 from pylsl import StreamInlet, resolve_stream
 from sklearn.preprocessing import StandardScaler
-import utils
+import modelUtils
 import os
 import sys
 import shutil
@@ -27,7 +27,7 @@ dataset_conf = { 'name': 'BCI2a', 'n_classes': 4, 'cl_labels': ['Left hand', 'Ri
                     'n_sub': 9, 'n_channels': 9, 'in_samples': 512,
                     'data_path': './datasets/BCI2a/raw/', 'isStandard': True, 'LOSO': True}
 
-model = utils.getModel('EEGTCNet', dataset_conf)
+model = modelUtils.getModel('EEGTCNet', dataset_conf)
 model.load_weights('./results_EEGTCNet/saved models/run-1/subject-1.weights.h5')
 
 _, _, _, X_test, y_test, y_test_onehot = get_data('./datasets/BCI2a/raw/', 1, 'BCI2a', LOSO = True, isStandard = True, isShuffle=False)

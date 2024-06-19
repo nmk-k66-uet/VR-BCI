@@ -6,7 +6,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import utils
+import modelUtils
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import CategoricalCrossentropy
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
@@ -90,7 +90,7 @@ def train(dataset_conf, train_conf, results_path):
             filepath = filepath + '/subject-{}.weights.h5'.format(sub+1)
             
             # Create the model
-            model = utils.getModel(model_name, dataset_conf, from_logits)
+            model = modelUtils.getModel(model_name, dataset_conf, from_logits)
             # Compile and train the model
             model.compile(loss=CategoricalCrossentropy(from_logits=from_logits), optimizer=Adam(learning_rate=lr), metrics=['accuracy'])          
 
@@ -141,7 +141,7 @@ def train(dataset_conf, train_conf, results_path):
         # Plot Learning curves 
         if (LearnCurves == True):
             print('Plot Learning Curves ....... ')
-            utils.draw_learning_curves(bestTrainingHistory, sub+1, results_path)
+            modelUtils.draw_learning_curves(bestTrainingHistory, sub+1, results_path)
           
     # Get the current 'OUT' time to calculate the overall training time
     out_exp = time.time()
@@ -214,7 +214,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
             kappa[sub, seed] = cohen_kappa_score(labels, y_pred)
             # Calculate and draw confusion matrix
             cf_matrix[sub, seed, :, :] = confusion_matrix(labels, y_pred, normalize='true')
-            utils.draw_confusion_matrix(cf_matrix[sub, seed, :, :], str(sub+1), results_path, classes_labels)
+            modelUtils.draw_confusion_matrix(cf_matrix[sub, seed, :, :], str(sub+1), results_path, classes_labels)
         
     # Print & write the average performance measures for all subjects     
     head1 = head2 = '                  '
@@ -247,7 +247,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
     # utils.draw_performance_barChart(n_sub, acc.mean(1), 'Accuracy')
     # utils.draw_performance_barChart(n_sub, kappa.mean(1), 'k-score')
     # Draw confusion matrix for all subjects (average)
-    utils.draw_confusion_matrix(cf_matrix.mean((0,1)), 'All', results_path, classes_labels)
+    modelUtils.draw_confusion_matrix(cf_matrix.mean((0,1)), 'All', results_path, classes_labels)
     # Close opened file    
     log_write.close() 
     
@@ -302,7 +302,7 @@ def run(mode = "Train"):
         train(dataset_conf, train_conf, results_path)
     elif mode == "Test":
         # Evaluate the model based on the weights saved in the '/results' folder
-        model = utils.getModel(train_conf.get('model'), dataset_conf)
+        model = modelUtils.getModel(train_conf.get('model'), dataset_conf)
         test(model, dataset_conf, results_path)
     else:
         print("Invalid command!") 
