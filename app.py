@@ -1,14 +1,19 @@
 import customtkinter as CTk
+from tkinter import filedialog
 import json
 from pylsl import StreamInlet, resolve_stream
 import socket
 from socket import SHUT_RDWR
 import threading
 from enum import Enum
+import numpy as np
+import pandas as pd
+from datetime import datetime
 
 CTk.set_appearance_mode("light")
 CTk.set_default_color_theme("green")
 server_running = False
+recording_in_progress = False
 
 genders = ["Nam", "Nữ"]
 
@@ -82,10 +87,10 @@ class App(CTk.CTk):
           
         #TCP to VR Connection
         self.server_thread = None
-        def handle_client_connection(client_socket):
+        def handle_client_connection(client_socket): #demo for connection  via app, need button interface and message queue
             while True:
                 try:
-                    client_socket.send(bytes(input(), 'utf-8')) #demo for connection  via app, need button interface
+                    client_socket.send(bytes(input(), 'utf-8')) 
                 except ConnectionResetError:
                     break
             client_socket.close()
@@ -159,27 +164,33 @@ class App(CTk.CTk):
         def add_action():
             action_type = None
             value = self.action_type_combo_box.get()
-            duration = self.action_duration_entry.get()
             match value:
                 case "Nghỉ":
                     action_type = Action.R
+                    duration = self.rest_duration_entry.get()
                 case "Gợi ý":
                     action_type = Action.C
+                    duration = self.cue_duration_entry.get()
                 case "Tay trái":
                     action_type = Action.LH
+                    duration = self.action_duration_entry.get()
                 case "Tay phải":
                     action_type = Action.RH
+                    duration = self.action_duration_entry.get()
                 case "Chân trái":
                     action_type = Action.LF
+                    duration = self.action_duration_entry.get()
                 case "Chân phải":
                     action_type = Action.RF
+                    duration = self.action_duration_entry.get()
             if (duration != ""):
                 action = (action_type, duration)
                 self.recording_scheme_per_run.append(action)
                 update_run_config() #add the last action added to the representition string
             else:
                 show_error_message(self, "Thời lượng thực hiện hành động không xác định")
-
+                
+                
         def remove_action():
             if len(self.recording_scheme_per_run) != 0:
                 self.recording_scheme_per_run.pop()
@@ -207,16 +218,25 @@ class App(CTk.CTk):
                 cur = action_name if (cur == "") else (cur + ", " + action_name)
             print(self.recording_scheme_per_run)
             self.run_config_label.configure(text=cur)
+            # generate_label_file()
             
+        self.rest_duration_label = CTk.CTkLabel(self.recording, text="Thời gian nghỉ (giây):")
+        self.rest_duration_label.pack()
+        self.rest_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.rest_duration_entry.pack(pady=10)
+        
+        self.cue_duration_label = CTk.CTkLabel(self.recording, text="Thời gian gợi ý (giây):")
+        self.cue_duration_label.pack()
+        self.cue_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.cue_duration_entry.pack(pady=10)
+        
+        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian thực hiện hành động (giây):")
+        self.action_duration_label.pack()
+        self.action_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.action_duration_entry.pack(pady=10)
         
         self.action_type_combo_box = CTk.CTkComboBox(self.recording, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"])
         self.action_type_combo_box.pack(pady=10)
-
-        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian (giây):")
-        self.action_duration_label.pack(pady=10)
-        self.action_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2",
-                                height=40, width=240, font=("Arial", 18))
-        self.action_duration_entry.pack(pady=10)
 
         self.add_action_to_run_button = CTk.CTkButton(self.recording, text="+", command=add_action, height=40, width=40)
         self.add_action_to_run_button.pack(padx=10)
@@ -226,15 +246,85 @@ class App(CTk.CTk):
 
         self.run_config_label = CTk.CTkLabel(self.recording, text="")
         self.run_config_label.pack(pady=10)
+        
         #Recording stage:
+        self.sampling_frequency = 128
+        
+        self.eeg_thread = None
+        
+        def generate_setting_file():
+            setting = {
+                "Rest": self.rest_duration_entry.get(),
+                "Cue":  self.cue_duration_entry.get(),
+                "Action.RH": self.action_duration_entry.get(),
+                "Action.LH": self.action_duration_entry.get(),
+                "Action.RF": self.action_duration_entry.get(),
+                "Action.LF": self.action_duration_entry.get(),
+            }
+            with open("data" + f"\\{get_file_path("json")}", "w") as file:
+                json.dump(setting, file)
+                        
+        def generate_label_file(): #Call when recording is finished
+            with open("data" + f"\\{get_file_path("txt")}", "w") as file:
+                for action in self.recording_scheme_per_run:
+                    file.write(f"{action[0].value} ")
+                    
+        def generate_data_file(data):
+            data = np.transpose(np.array(data))
+            df = pd.DataFrame(data)
+            df.to_csv("data" + f"\\{get_file_path("csv")}", index = False)
+            
+            
+        def pull_eeg_data(self):
+            cur_action_index = 0
+            sample_count = 0
+            data = []
+            while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
+                sample, timestamp = self.inlet.pull_sample()
+                if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
+                    values = [  sample[3],  sample[4], 
+                                sample[5],  sample[14], 
+                                sample[15], sample[16], 
+                                sample[6],  sample[7], 
+                                sample[8],  sample[9],
+                                sample[17], sample[18], 
+                                sample[19], sample[10], 
+                                sample[11], sample[22], 
+                                sample[21], sample[20],
+                                sample[12], sample[13],
+                                sample[23], sample[24]] 
+                    #TODO: record data to file
+                    data.append(values)
+                    sample_count += 1
+                if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_rate: #All samples of an action recorded
+                    sample_count = 0
+                    cur_action_index = cur_action_index + 1
+            recording_in_progress = False
+            generate_label_file()
+            generate_data_file(data)
+            generate_setting_file()
+            self.recording_progress_label.configure(text="Recording finished")
+
+        def start_eeg_thread(self):
+            if self.eeg_thread is None or not self.eeg_thread.is_alive():
+                self.eeg_thread = threading.Thread(target=pull_eeg_data, daemon=True)
+                self.eeg_thread.start()
+                
         def start_recording():
+            global recording_in_progress
             if self.eeg_connection_flag.get() == 0:
                 show_error_message(self,"Không có kết nối với mũ thu EEG")
-            #else: Start recording based on run config
+            else:
+                recording_in_progress = True
+                start_eeg_thread(self)
+                self.recording_progress_label.configure(text="Recording...")
+            
+        
         
         self.recording_button = CTk.CTkButton(self.recording, text="Start Recording", command=start_recording)
         self.recording_button.pack(pady=10)
-
+        
+        self.recording_progress_label = CTk.CTkLabel(self.recording, text="")
         #----------------------Settings----------------------#
         # Light and Dark Mode switch
         def switch_display_mode():
@@ -265,9 +355,19 @@ class App(CTk.CTk):
             ok_button.pack(pady=10)
         Action = Enum("Action", ["R", "C", "RH", "LH", "RF", "LF"])
 
-
-            
-
+        # def get_data_folder_path(): #TODO: allow users to pick data folder
+        #     folder_selected = filedialog.askdirectory()
+        #     if folder_selected:
+        #         return f"{folder_selected}"
+        
+        def get_file_path(file_type): #TODO: get the folder directory that the user chooses
+            if self.name_entry.get() != "": 
+                file_path = self.name_entry.get() + "_" + datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
+                # if os.path.exists(file_path): #TODO: create index for file if file path exists
+                    
+                return file_path
+            else:
+                show_error_message("Chưa có tên đối tượng thu dữ liệu")
         
 # Main loop
 app = App()
