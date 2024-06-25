@@ -50,14 +50,48 @@ class App(CTk.CTk):
         self.iconbitmap("assets/icon/cat_icon.ico")
         #------------------------------------------------------#
         # Create tab view
-        self.tabs = CTk.CTkTabview(self, width=1200, height=675)
-        self.tabs.pack()
+        self.tabs = CTk.CTkTabview(self, width=1280, height=720)
+        self.tabs.pack(expand=True, fill="both")
 
         # Create tabs
-        self.home = self.tabs.add("Home")
-        self.recording = self.tabs.add("Recording")
-        self.training = self.tabs.add("Training")
-        self.settings = self.tabs.add("Settings")
+        self.home = self.tabs.add("Trang chủ")
+        self.recording = self.tabs.add("Thu dữ liệu")
+        self.training = self.tabs.add("Luyện tập")
+        self.settings = self.tabs.add("Cài đặt")
+        
+        #Grid configuration
+        self.home.grid_columnconfigure(0, weight=1)
+        self.home.grid_columnconfigure(1, weight=1)
+        self.home.grid_columnconfigure(2, weight=1)
+        self.home.grid_columnconfigure(3, weight=1)
+        self.home.grid_rowconfigure(0, weight=1)
+        self.home.grid_rowconfigure(1, weight=1)
+        self.home.grid_rowconfigure(2, weight=1)
+        self.home.grid_rowconfigure(3, weight=1)
+        self.home.grid_rowconfigure(4, weight=1)
+        self.home.grid_rowconfigure(5, weight=1)
+        self.home.grid_rowconfigure(6, weight=5)
+        
+        self.recording.grid_columnconfigure(0, weight=1)
+        self.recording.grid_columnconfigure(1, weight=1)
+        self.recording.grid_columnconfigure(2, weight=1)
+        self.recording.grid_columnconfigure(3, weight=1)
+        self.recording.grid_rowconfigure(0, weight=1)
+        self.recording.grid_rowconfigure(1, weight=1)
+        self.recording.grid_rowconfigure(2, weight=1)
+        self.recording.grid_rowconfigure(3, weight=1)
+        self.recording.grid_rowconfigure(4, weight=1)
+        self.recording.grid_rowconfigure(5, weight=1)
+        self.recording.grid_rowconfigure(6, weight=1)
+        self.recording.grid_rowconfigure(7, weight=1)
+        self.recording.grid_rowconfigure(8, weight=1)
+        self.recording.grid_rowconfigure(9, weight=1)
+        
+        self.training.grid_columnconfigure(0, weight=1)
+        self.training.grid_rowconfigure(0, weight=1)
+        
+        self.settings.grid_columnconfigure(0, weight=1)
+        self.settings.grid_rowconfigure(0, weight=1)
         
         #-------------------------Home--------------------------#
         #EEG Stream connection
@@ -70,19 +104,19 @@ class App(CTk.CTk):
             if self.eeg_connection_flag.get() == 0:
                 self.eeg_stream = None
                 self.inlet = None
-                self.eeg_connection_switch.configure(text="Connect Emotiv Headset | Disconnected")
+                self.eeg_connection_switch.configure(text="Kết nối thiết bị Emotiv | Ngắt kết nối", font=("Arial", 18))
             else:
                 print("Looking for a stream...")
                 self.eeg_stream = resolve_stream('type', 'EEG')
                 self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
                 print(self.inlet)
                 # print(self.inlet.pull_sample())
-                self.eeg_connection_switch.configure(text="Connect Emotiv Headset | Connected")
-        self.eeg_connection_switch = CTk.CTkSwitch(self.home, text="Connect Emotiv Headset",
+                self.eeg_connection_switch.configure(text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
+        self.eeg_connection_switch = CTk.CTkSwitch(self.home, text="Kết nối thiết bị Emotiv", font=("Arial", 18),
                                     command=toggle_eeg_connection, variable=self.eeg_connection_flag,
                                     onvalue=1, offvalue=0,
                                     switch_width=48, switch_height=27)
-        self.eeg_connection_switch.pack(pady=10)
+        self.eeg_connection_switch.grid(row=1, column=0, columnspan=4)
         
           
         #TCP to VR Connection
@@ -119,17 +153,17 @@ class App(CTk.CTk):
                 print(f"Initializing TCP connection...")
                 server_running = True
                 start_server_thread(self)
-                self.vr_connection.configure(text="Connect Oculus Headset | Connected")
+                self.vr_connection.configure(text="Kết nối kính VR | Đã kết nối", font=("Arial", 18))
             elif self.vr_connection_flag.get() == 0:
                 server_running = False
-                self.vr_connection.configure(text="Connect Oculus Headset | Disconnected")
+                self.vr_connection.configure(text="Kết nối kính VR | Đã ngắt kết nối", font=("Arial", 18))
                 
         self.vr_connection_flag = CTk.IntVar(value=0)
-        self.vr_connection = CTk.CTkSwitch(self.home, text="Connect Oculus Headset",
+        self.vr_connection = CTk.CTkSwitch(self.home, text="Kết nối kính VR", font=("Arial", 18),
                                     command=toggle_vr_connection, variable=self.vr_connection_flag,
                                     onvalue=1, offvalue=0,
                                     switch_width=48, switch_height=27)
-        self.vr_connection.pack(pady=10)
+        self.vr_connection.grid(row=2, column=0, columnspan=4)
             
         # Patient information entry field
         def submit(): # Implement to send messages through TCP connection for character selection
@@ -137,19 +171,19 @@ class App(CTk.CTk):
 
         self.name_entry = CTk.CTkEntry(self.home, placeholder_text="Nhập tên bệnh nhân",
                                 height=40, width=240, font=("Arial", 18))
-        self.name_entry.pack(pady=10)
 
         self.age_entry = CTk.CTkEntry(self.home, placeholder_text="Nhập tuổi bệnh nhân",
                                 height=40, width=240, font=("Arial", 18))
-        self.age_entry.pack(pady=10)
 
-        self.gender_options = CTk.CTkOptionMenu(self.home, values=genders)
-        self.gender_options.pack(pady=10)
+        self.gender_options = CTk.CTkOptionMenu(self.home, values=genders, font=("Arial", 18))
 
-        self.submit_button = CTk.CTkButton(self.home, text="Submit", command=submit)
-        self.submit_button.pack(side='right', anchor='center', pady=10)
+        self.submit_button = CTk.CTkButton(self.home, text="Gửi", font=("Arial", 18), command=submit)
         
         
+        self.name_entry.grid(row=3, column=1, columnspan=2)
+        self.age_entry.grid(row=4, column=1, columnspan=2)
+        self.gender_options.grid(row=5, column=1, columnspan=2)
+        self.submit_button.grid(row=6, column=1, columnspan=2)
         #----------------------Recording----------------------#
         #TODO: Sesison configuration: actions per trial of sessions
         #Configuration: duration of trial, rest time between trial,
@@ -217,35 +251,25 @@ class App(CTk.CTk):
                         action_name = "Chân phải"
                 cur = action_name if (cur == "") else (cur + ", " + action_name)
             print(self.recording_scheme_per_run)
-            self.run_config_label.configure(text=cur)
+            self.run_config_label.configure(text=cur, font=("Arial", 18))
             # generate_label_file()
             
-        self.rest_duration_label = CTk.CTkLabel(self.recording, text="Thời gian nghỉ (giây):")
-        self.rest_duration_label.pack()
+        self.rest_duration_label = CTk.CTkLabel(self.recording, text="Thời gian nghỉ (giây):", font=("Arial", 18))
         self.rest_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
-        self.rest_duration_entry.pack(pady=10)
         
-        self.cue_duration_label = CTk.CTkLabel(self.recording, text="Thời gian gợi ý (giây):")
-        self.cue_duration_label.pack()
+        self.cue_duration_label = CTk.CTkLabel(self.recording, text="Thời gian gợi ý (giây):", font=("Arial", 18))
         self.cue_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
-        self.cue_duration_entry.pack(pady=10)
         
-        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian thực hiện hành động (giây):")
-        self.action_duration_label.pack()
+        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian thực hiện hành động (giây):", font=("Arial", 18))
         self.action_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
-        self.action_duration_entry.pack(pady=10)
         
-        self.action_type_combo_box = CTk.CTkComboBox(self.recording, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"])
-        self.action_type_combo_box.pack(pady=10)
-
-        self.add_action_to_run_button = CTk.CTkButton(self.recording, text="+", command=add_action, height=40, width=40)
-        self.add_action_to_run_button.pack(padx=10)
-
-        self.remove_action_to_run_button = CTk.CTkButton(self.recording, text="-", command=remove_action, height=40, width=40)
-        self.remove_action_to_run_button.pack(padx=10)
-
-        self.run_config_label = CTk.CTkLabel(self.recording, text="")
-        self.run_config_label.pack(pady=10)
+        self.action_type_combo_box = CTk.CTkComboBox(self.recording, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"],font=("Arial", 18))
+        self.add_action_to_run_button = CTk.CTkButton(self.recording, text="Thêm",font=("Arial", 18),  command=add_action, height=40, width=40)
+        self.remove_action_to_run_button = CTk.CTkButton(self.recording, text="Bớt",font=("Arial", 18),  command=remove_action, height=40, width=40)
+        
+        self.run_config_label = CTk.CTkLabel(self.recording, text="", font=("Arial", 18))
+        self.repeated_runs_label = CTk.CTkLabel(self.recording, text="Số lần lặp lại kịch bản:", font=("Arial", 18))
+        self.repeated_runs_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
         
         #Recording stage:
         self.sampling_frequency = 128
@@ -254,21 +278,25 @@ class App(CTk.CTk):
         
         def generate_setting_file():
             setting = {
-                "Rest": self.rest_duration_entry.get(),
-                "Cue":  self.cue_duration_entry.get(),
-                "Action.RH": self.action_duration_entry.get(),
-                "Action.LH": self.action_duration_entry.get(),
-                "Action.RF": self.action_duration_entry.get(),
-                "Action.LF": self.action_duration_entry.get(),
+                "labels":{
+                    "Rest": int(self.rest_duration_entry.get()),
+                    "Cue":  int(self.cue_duration_entry.get()),
+                    "Action.RH": int(self.action_duration_entry.get()),
+                    "Action.LH": int(self.action_duration_entry.get()),
+                    "Action.RF": int(self.action_duration_entry.get()),
+                    "Action.LF": int(self.action_duration_entry.get()),
+                },
+                "num_of_runs": int(self.repeated_runs_entry.get())           
             }
             with open("data" + f"/{get_file_path('json')}", "w") as file:
                 json.dump(setting, file)
                         
         def generate_label_file(): #Call when recording is finished
             with open("data" + f"/{get_file_path('txt')}", "w") as file:
-                for action in self.recording_scheme_per_run:
-                    file.write(f"{action[0].value}")
-                    
+                for i in range(0, int(self.repeated_runs_entry.get())):
+                    for action in self.recording_scheme_per_run:
+                        file.write(f"{action[0].value}")
+                        
         def generate_data_file(data):
             data = np.array(data)
             df = pd.DataFrame(data)
@@ -276,38 +304,39 @@ class App(CTk.CTk):
             
             
         def pull_eeg_data():
-            global recording_in_progress
-            cur_action_index = 0
-            sample_count = 0
-            data = []
-            while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
-                sample, timestamp = self.inlet.pull_sample(timeout=0.0)
-                # print("Current action index: " + str(cur_action_index))
-                if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
-                    values = [  sample[3],  sample[4], 
-                                sample[5],  sample[14], 
-                                sample[15], sample[16], 
-                                sample[6],  sample[7], 
-                                sample[8],  sample[9],
-                                sample[17], sample[18], 
-                                sample[19], sample[10], 
-                                sample[11], sample[22], 
-                                sample[21], sample[20],
-                                sample[12], sample[13],
-                                sample[23], sample[24]] 
-                    #TODO: record data to file
-                    data.append(values)
-                    sample_count += 1
-                    print(timestamp)
+            for i in range(0, int(self.repeated_runs_entry.get())):
+                global recording_in_progress
+                cur_action_index = 0
+                sample_count = 0
+                data = []
+                while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
+                    sample, timestamp = self.inlet.pull_sample(timeout=0.0)
+                    # print("Current action index: " + str(cur_action_index))
+                    if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
+                        values = [  sample[3],  sample[4], 
+                                    sample[5],  sample[14], 
+                                    sample[15], sample[16], 
+                                    sample[6],  sample[7], 
+                                    sample[8],  sample[9],
+                                    sample[17], sample[18], 
+                                    sample[19], sample[10], 
+                                    sample[11], sample[22], 
+                                    sample[21], sample[20],
+                                    sample[12], sample[13],
+                                    sample[23], sample[24]] 
+                        #TODO: record data to file
+                        data.append(values)
+                        sample_count += 1
+                        print(timestamp)
 
-                if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_frequency: #All samples of an action recorded
-                    sample_count = 0
-                    cur_action_index = cur_action_index + 1
+                    if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_frequency: #All samples of an action recorded
+                        sample_count = 0
+                        cur_action_index = cur_action_index + 1
             recording_in_progress = False
             generate_label_file()
             generate_data_file(data)
             generate_setting_file()
-            self.recording_progress_label.configure(text="Recording finished")
+            self.recording_progress_label.configure(text="Hoàn thành thu dữ liệu")
 
         def start_eeg_thread(self):
             if self.eeg_thread is None or not self.eeg_thread.is_alive():
@@ -321,20 +350,35 @@ class App(CTk.CTk):
             else:
                 recording_in_progress = True
                 start_eeg_thread(self)
-                self.recording_progress_label.configure(text="Recording...")
+                self.recording_progress_label.configure(text="Đang thu dữ liệu...", font=("Arial", 18))
             
         def stop_recording():
             global recording_in_progress
             recording_in_progress = False
         
-        self.recording_button = CTk.CTkButton(self.recording, text="Start Recording", command=start_recording)
-        self.recording_button.pack(pady=10)
+        self.recording_button = CTk.CTkButton(self.recording, text="Bắt đầu thu",font=("Arial", 18), command=start_recording)
 
-        self.stop_recording_button = CTk.CTkButton(self.recording, text="Stop Recording", command=stop_recording)
-        self.stop_recording_button.pack(pady=10)
+        self.stop_recording_button = CTk.CTkButton(self.recording, text="Dừng thu",font=("Arial", 18), command=stop_recording)
         
-        self.recording_progress_label = CTk.CTkLabel(self.recording, text="")
-        self.recording_progress_label.pack(pady=10)
+        self.recording_progress_label = CTk.CTkLabel(self.recording, text="", font=("Arial", 18))
+        
+        
+        self.rest_duration_label.grid(row=0, column=0, columnspan=2)
+        self.rest_duration_entry.grid(row=0, column=2, columnspan=2)
+        self.cue_duration_label.grid(row=1, column=0, columnspan=2)
+        self.cue_duration_entry.grid(row=1, column=2, columnspan=2)
+        self.action_duration_label.grid(row=2, column=0, columnspan=2)
+        self.action_duration_entry.grid(row=2, column=2, columnspan=2)
+        self.action_type_combo_box.grid(row=3, column=0, columnspan=4)
+        self.add_action_to_run_button.grid(row=4, column=1, columnspan=1)
+        self.remove_action_to_run_button.grid(row=4, column=2, columnspan=1)
+        self.run_config_label.grid(row=5, column=0, columnspan=4)
+        self.repeated_runs_label.grid(row=6, column=0, columnspan=2)
+        self.repeated_runs_entry.grid(row=6, column=2, columnspan=2)
+    
+        self.recording_button.grid(row=7, column=1, columnspan=2)
+        self.stop_recording_button.grid(row=8, column=1, columnspan=2)
+        self.recording_progress_label.grid(row=9, column=1, columnspan=2)
         #----------------------Settings----------------------#
         # Light and Dark Mode switch
         def switch_display_mode():
@@ -344,25 +388,26 @@ class App(CTk.CTk):
                 CTk.set_appearance_mode("dark")
 
         self.display_mode_flag = CTk.IntVar(value=0)
-        self.display_mode_switch = CTk.CTkSwitch(self.settings, text="Dark Mode", 
+        self.display_mode_switch = CTk.CTkSwitch(self.settings, text="Chế độ tối", font=("Arial", 18), 
                                     command=switch_display_mode, variable=self.display_mode_flag, 
                                     onvalue=1, offvalue=0,
                                     switch_width=48, switch_height=27)
-        self.display_mode_switch.pack(pady=20)
+        self.display_mode_switch.grid(row=1, column=1, columnspan=2)
         #----------------------Utils----------------------#
         def show_error_message(self, error_message):
             error_window = CTk.CTkToplevel(self)
             error_window.title("Error")
             error_window.geometry("300x200")
 
-            error_label = CTk.CTkLabel(error_window, text="Error", fg_color="red")
-            error_label.pack(pady=10)
+            error_label = CTk.CTkLabel(error_window, text="Lỗi", font=("Arial", 18), fg_color="red")
 
-            message_label = CTk.CTkLabel(error_window, text=error_message, fg_color="red")
-            message_label.pack(pady=10)
+            message_label = CTk.CTkLabel(error_window, text=error_message,font=("Arial", 18),  fg_color="red")
 
-            ok_button = CTk.CTkButton(error_window, text="OK", command=error_window.destroy)
-            ok_button.pack(pady=10)
+            ok_button = CTk.CTkButton(error_window, text="OK", font=("Arial", 18), command=error_window.destroy)
+            
+            error_label.grid(row=1,column=1, columnspan=2)
+            message_label.grid(row=2, column=1, columnspan=2)
+            ok_button.grid(row=3, column=1, columnspan=2)
         Action = Enum("Action", ["R", "C", "RH", "LH", "RF", "LF"])
 
         # def get_data_folder_path(): #TODO: allow users to pick data folder
