@@ -74,7 +74,7 @@ class App(CTk.CTk):
             else:
                 print("Looking for a stream...")
                 self.eeg_stream = resolve_stream('type', 'EEG')
-                self.inlet = StreamInlet(self.eeg_stream[0])
+                self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
                 print(self.inlet)
                 # print(self.inlet.pull_sample())
                 self.eeg_connection_switch.configure(text="Connect Emotiv Headset | Connected")
@@ -167,22 +167,22 @@ class App(CTk.CTk):
             match value:
                 case "Nghỉ":
                     action_type = Action.R
-                    duration = self.rest_duration_entry.get()
+                    duration = int(self.rest_duration_entry.get())
                 case "Gợi ý":
                     action_type = Action.C
-                    duration = self.cue_duration_entry.get()
+                    duration = int(self.cue_duration_entry.get())
                 case "Tay trái":
                     action_type = Action.LH
-                    duration = self.action_duration_entry.get()
+                    duration = int(self.action_duration_entry.get())
                 case "Tay phải":
                     action_type = Action.RH
-                    duration = self.action_duration_entry.get()
+                    duration = int(self.action_duration_entry.get())
                 case "Chân trái":
                     action_type = Action.LF
-                    duration = self.action_duration_entry.get()
+                    duration = int(self.action_duration_entry.get())
                 case "Chân phải":
                     action_type = Action.RF
-                    duration = self.action_duration_entry.get()
+                    duration = int(self.action_duration_entry.get())
             if (duration != ""):
                 action = (action_type, duration)
                 self.recording_scheme_per_run.append(action)
@@ -206,7 +206,7 @@ class App(CTk.CTk):
                     case Action.R:
                         action_name = "Nghỉ"
                     case Action.C:
-                        action_name = "Gợi "
+                        action_name = "Gợi ý"
                     case Action.LH:
                         action_name = "Tay trái"
                     case Action.RH:
@@ -261,26 +261,28 @@ class App(CTk.CTk):
                 "Action.RF": self.action_duration_entry.get(),
                 "Action.LF": self.action_duration_entry.get(),
             }
-            with open("data" + f"\\{get_file_path("json")}", "w") as file:
+            with open("data" + f"/{get_file_path('json')}", "w") as file:
                 json.dump(setting, file)
                         
         def generate_label_file(): #Call when recording is finished
-            with open("data" + f"\\{get_file_path("txt")}", "w") as file:
+            with open("data" + f"/{get_file_path('txt')}", "w") as file:
                 for action in self.recording_scheme_per_run:
-                    file.write(f"{action[0].value} ")
+                    file.write(f"{action[0].value}")
                     
         def generate_data_file(data):
-            data = np.transpose(np.array(data))
+            data = np.array(data)
             df = pd.DataFrame(data)
-            df.to_csv("data" + f"\\{get_file_path("csv")}", index = False)
+            df.to_csv("data" + f"/{get_file_path('csv')}", index = False)
             
             
-        def pull_eeg_data(self):
+        def pull_eeg_data():
+            global recording_in_progress
             cur_action_index = 0
             sample_count = 0
             data = []
             while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
-                sample, timestamp = self.inlet.pull_sample()
+                sample, timestamp = self.inlet.pull_sample(timeout=0.0)
+                # print("Current action index: " + str(cur_action_index))
                 if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
                     values = [  sample[3],  sample[4], 
                                 sample[5],  sample[14], 
@@ -296,7 +298,9 @@ class App(CTk.CTk):
                     #TODO: record data to file
                     data.append(values)
                     sample_count += 1
-                if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_rate: #All samples of an action recorded
+                    print(timestamp)
+
+                if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_frequency: #All samples of an action recorded
                     sample_count = 0
                     cur_action_index = cur_action_index + 1
             recording_in_progress = False
@@ -319,12 +323,18 @@ class App(CTk.CTk):
                 start_eeg_thread(self)
                 self.recording_progress_label.configure(text="Recording...")
             
-        
+        def stop_recording():
+            global recording_in_progress
+            recording_in_progress = False
         
         self.recording_button = CTk.CTkButton(self.recording, text="Start Recording", command=start_recording)
         self.recording_button.pack(pady=10)
+
+        self.stop_recording_button = CTk.CTkButton(self.recording, text="Stop Recording", command=stop_recording)
+        self.stop_recording_button.pack(pady=10)
         
         self.recording_progress_label = CTk.CTkLabel(self.recording, text="")
+        self.recording_progress_label.pack(pady=10)
         #----------------------Settings----------------------#
         # Light and Dark Mode switch
         def switch_display_mode():
