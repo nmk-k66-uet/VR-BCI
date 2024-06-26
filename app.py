@@ -46,7 +46,8 @@ class App(CTk.CTk):
         w, h = 1280, 720
         ws = user32.GetSystemMetrics(0)
         hs = user32.GetSystemMetrics(1)
-        print(self._get_window_scaling ())
+        print(ws, hs)
+        print(self._get_window_scaling())
         x = int(((ws-w)/2)/self._get_window_scaling())
         y = int(((hs-h)/2)/self._get_window_scaling())
         print(w, h, x, y)
