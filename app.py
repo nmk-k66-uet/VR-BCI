@@ -21,6 +21,7 @@ server_running = False
 recording_in_progress = False
 
 genders = ["Nam", "Nữ"]
+Action = Enum("Action", ["R", "C", "RH", "LH", "RF", "LF"])
 
 HOST, PORT = "127.0.0.1", 8000
 
@@ -45,8 +46,11 @@ class App(CTk.CTk):
         w, h = 1280, 720
         ws = user32.GetSystemMetrics(0)
         hs = user32.GetSystemMetrics(1)
+        print(ws, hs)
+        print(self._get_window_scaling())
         x = int(((ws-w)/2)/self._get_window_scaling())
         y = int(((hs-h)/2)/self._get_window_scaling())
+        print(w, h, x, y)
         
         # Main app configuration
         self.title("VR-BCI")
@@ -69,20 +73,10 @@ class App(CTk.CTk):
         self.home.grid_columnconfigure(1, weight=1)
         self.home.grid_rowconfigure(0, weight=1)
         
-        self.recording.grid_columnconfigure(0, weight=10)
+        self.recording.grid_columnconfigure(0, weight=1)
         self.recording.grid_columnconfigure(1, weight=1)
         self.recording.grid_columnconfigure(2, weight=1)
-        self.recording.grid_columnconfigure(3, weight=10)
         self.recording.grid_rowconfigure(0, weight=1)
-        self.recording.grid_rowconfigure(1, weight=1)
-        self.recording.grid_rowconfigure(2, weight=1)
-        self.recording.grid_rowconfigure(3, weight=1)
-        self.recording.grid_rowconfigure(4, weight=1)
-        self.recording.grid_rowconfigure(5, weight=1)
-        self.recording.grid_rowconfigure(6, weight=1)
-        self.recording.grid_rowconfigure(7, weight=1)
-        self.recording.grid_rowconfigure(8, weight=1)
-        self.recording.grid_rowconfigure(9, weight=1)
         
         self.training.grid_columnconfigure(0, weight=1)
         self.training.grid_rowconfigure(0, weight=1)
@@ -207,6 +201,32 @@ class App(CTk.CTk):
         self.submit_button.grid(row=3, column=1, columnspan=1)
         # add_border(self.home, 2, 6)
         #----------------------Recording----------------------#
+        #Layout
+        self.recording_duration_config_frame = CTk.CTkFrame(master=self.recording, fg_color="light blue")
+        self.recording_duration_config_frame.grid_columnconfigure(0, weight=3)
+        self.recording_duration_config_frame.grid_columnconfigure(1, weight=1)
+        self.recording_duration_config_frame.grid_rowconfigure(0, weight=1)
+        self.recording_duration_config_frame.grid_rowconfigure(1, weight=1)
+        self.recording_duration_config_frame.grid_rowconfigure(2, weight=1)
+        self.recording_duration_config_frame.grid_rowconfigure(3, weight=6)
+        
+        self.recording_scheme_config_frame = CTk.CTkFrame(master=self.recording, fg_color="aquamarine")
+        self.recording_scheme_config_frame.grid_columnconfigure(0, weight=1)
+        self.recording_scheme_config_frame.grid_columnconfigure(1, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(0, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(1, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(2, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(3, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(4, weight=4)
+        
+        self.recording_operation_frame = CTk.CTkFrame(master=self.recording, fg_color="khaki")
+        self.recording_operation_frame.grid_columnconfigure(0, weight=1)
+        self.recording_operation_frame.grid_columnconfigure(1, weight=1)
+        self.recording_operation_frame.grid_rowconfigure(0, weight=1)
+        self.recording_operation_frame.grid_rowconfigure(1, weight=1)
+        self.recording_operation_frame.grid_rowconfigure(2, weight=1)
+        self.recording_operation_frame.grid_rowconfigure(3, weight=3)
+        
         #Run configuration stage:
         self.recording_scheme_per_run = []
         def add_action():
@@ -267,22 +287,23 @@ class App(CTk.CTk):
             self.run_config_label.configure(text=cur, font=("Arial", 18))
             # generate_label_file()
             
-        self.rest_duration_label = CTk.CTkLabel(self.recording, text="Thời gian nghỉ (giây):", font=("Arial", 18))
-        self.rest_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.rest_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian nghỉ (giây):", wraplength=150,font=("Arial", 18))
+        self.rest_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
-        self.cue_duration_label = CTk.CTkLabel(self.recording, text="Thời gian gợi ý (giây):", font=("Arial", 18))
-        self.cue_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.cue_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian gợi ý (giây):", wraplength=150, font=("Arial", 18))
+        self.cue_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
-        self.action_duration_label = CTk.CTkLabel(self.recording, text="Thời gian thực hiện hành động (giây):", font=("Arial", 18))
-        self.action_duration_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.action_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian thực hiện (giây):", wraplength=180, font=("Arial", 18))
+        self.action_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
-        self.action_type_combo_box = CTk.CTkComboBox(self.recording, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"],font=("Arial", 18))
-        self.add_action_to_run_button = CTk.CTkButton(self.recording, text="Thêm",font=("Arial", 18),  command=add_action, height=40, width=100)
-        self.remove_action_to_run_button = CTk.CTkButton(self.recording, text="Bớt",font=("Arial", 18),  command=remove_action, height=40, width=100)
+        self.action_type_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="Hành động tiếp theo:", wraplength=180, font=("Arial", 18))
+        self.action_type_combo_box = CTk.CTkComboBox(self.recording_scheme_config_frame, values=["Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải"],font=("Arial", 18), width=100)
+        self.add_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Thêm",font=("Arial", 18),  command=add_action, height=40, width=100)
+        self.remove_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Bớt",font=("Arial", 18),  command=remove_action, height=40, width=100)
         
-        self.run_config_label = CTk.CTkLabel(self.recording, text="", font=("Arial", 18))
-        self.repeated_runs_label = CTk.CTkLabel(self.recording, text="Số lần lặp lại kịch bản:", font=("Arial", 18))
-        self.repeated_runs_entry = CTk.CTkEntry(self.recording, placeholder_text="2", height=40, width=240, font=("Arial", 18))
+        self.run_config_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="", font=("Arial", 18))
+        self.repeated_runs_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="Số lần lặp lại kịch bản:", wraplength=180, font=("Arial", 18))
+        self.repeated_runs_entry = CTk.CTkEntry(self.recording_scheme_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
         #Recording stage:
         self.sampling_frequency = 128
@@ -362,35 +383,46 @@ class App(CTk.CTk):
             else:
                 recording_in_progress = True
                 start_eeg_thread(self)
+                # init_cue_window(self)
                 self.recording_progress_label.configure(text="Đang thu dữ liệu...", font=("Arial", 18))
             
         def stop_recording():
             global recording_in_progress
             recording_in_progress = False
         
-        self.recording_button = CTk.CTkButton(self.recording, text="Bắt đầu thu",font=("Arial", 18), command=start_recording, height=40, width=100)
-
-        self.stop_recording_button = CTk.CTkButton(self.recording, text="Dừng thu",font=("Arial", 18), command=stop_recording, height=40, width=100)
         
-        self.recording_progress_label = CTk.CTkLabel(self.recording, text="", font=("Arial", 18))
-           
-        self.rest_duration_label.grid(row=0, column=1, columnspan=1, sticky="w")
-        self.rest_duration_entry.grid(row=0, column=2, columnspan=1)
-        self.cue_duration_label.grid(row=1, column=1, columnspan=1, sticky="w")
-        self.cue_duration_entry.grid(row=1, column=2, columnspan=1)
-        self.action_duration_label.grid(row=2, column=1, columnspan=1, sticky="w")
-        self.action_duration_entry.grid(row=2, column=2, columnspan=1)
-        self.action_type_combo_box.grid(row=3, column=1, columnspan=2)
-        self.add_action_to_run_button.grid(row=4, column=1, columnspan=1, sticky="e", padx=10)
-        self.remove_action_to_run_button.grid(row=4, column=2, columnspan=1, sticky="w", padx=10)
-        self.run_config_label.grid(row=5, column=1, columnspan=2)
-        self.repeated_runs_label.grid(row=6, column=1, columnspan=1, sticky="w")
-        self.repeated_runs_entry.grid(row=6, column=2, columnspan=1)
+        self.trial_button = CTk.CTkButton(self.recording_operation_frame, text="Thu thử",font=("Arial", 18), command=lambda: init_cue_window(self), height=40, width=100)
+        self.recording_button = CTk.CTkButton(self.recording_operation_frame, text="Bắt đầu thu",font=("Arial", 18), command=start_recording, height=40, width=100)
+
+        self.stop_recording_button = CTk.CTkButton(self.recording_operation_frame, text="Dừng thu",font=("Arial", 18), command=stop_recording, height=40, width=100)
+        
+        self.recording_progress_label = CTk.CTkLabel(self.recording_operation_frame, text="", font=("Arial", 18))
+        
+        self.recording_duration_config_frame.grid(row=0, column=0, sticky="nsew")
+        self.rest_duration_label.grid(row=0, column=0, columnspan=1, sticky="nsew")
+        self.rest_duration_entry.grid(row=0, column=1, columnspan=1)
+        self.cue_duration_label.grid(row=1, column=0, columnspan=1, sticky="nsew")
+        self.cue_duration_entry.grid(row=1, column=1, columnspan=1)
+        self.action_duration_label.grid(row=2, column=0, columnspan=1, sticky="nsew")
+        self.action_duration_entry.grid(row=2, column=1, columnspan=1)
+        
+        self.recording_scheme_config_frame.grid(row=0, column=1, sticky="nsew")
+        self.action_type_label.grid(row=0, column=0, columnspan=1)
+        self.action_type_combo_box.grid(row=0, column=1, columnspan=1)
+        self.add_action_to_run_button.grid(row=1, column=0, columnspan=1, sticky="e", padx=(0,10))
+        self.remove_action_to_run_button.grid(row=1, column=1, columnspan=1, sticky="w", padx=(0,0))
+        self.run_config_label.grid(row=2, column=0, columnspan=2)
+        self.repeated_runs_label.grid(row=3, column=0, columnspan=1, sticky="nsew")
+        self.repeated_runs_entry.grid(row=3, column=1, columnspan=1)
     
-        self.recording_button.grid(row=7, column=1, columnspan=1, sticky="e", padx=10)
-        self.stop_recording_button.grid(row=7, column=2, columnspan=1, sticky="w", padx=10)
-        self.recording_progress_label.grid(row=8, column=1, columnspan=2,)
+        self.recording_operation_frame.grid(row=0, column=2, sticky="nsew")
+        self.trial_button.grid(row=0, column=0, columnspan=2)
+        self.recording_button.grid(row=1, column=0, columnspan=1, sticky="e", padx=10)
+        self.stop_recording_button.grid(row=1, column=1, columnspan=1, sticky="w", padx=10)
+        self.recording_progress_label.grid(row=2, column=0, columnspan=2,)
         # add_border(self.recording, 3, 8)
+        #---------------------Cue Window---------------------#
+        self.cue_window = None
         #----------------------Settings----------------------#
         # Light and Dark Mode switch
         def switch_display_mode():
@@ -420,8 +452,7 @@ class App(CTk.CTk):
             error_label.grid(row=1,column=1, columnspan=2)
             message_label.grid(row=2, column=1, columnspan=2)
             ok_button.grid(row=3, column=1, columnspan=2)
-        Action = Enum("Action", ["R", "C", "RH", "LH", "RF", "LF"])
-
+        
         # def get_data_folder_path(): #TODO: allow users to pick data folder
         #     folder_selected = filedialog.askdirectory()
         #     if folder_selected:
@@ -432,58 +463,82 @@ class App(CTk.CTk):
                 file_path = self.name_entry.get() + "_" + datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
                 return file_path
             else:
-                show_error_message("Chưa có tên đối tượng thu dữ liệu")
+                show_error_message(self, "Chưa có tên đối tượng thu dữ liệu")
         
-        # self.cue_images = [CTk.CTkImage(light_image="images/arrow_left_foot.png"), 
-        #                CTk.CTkImage(light_image="images/arrow_right_foot.png"), 
-        #                CTk.CTkImage(light_image="images/arrow_left_hand.png"), 
-        #                CTk.CTkImage(light_image="images/arrow_right_hand.png")]
+        def init_cue_window(self):
+            window = CTk.CTkToplevel(self)
+            window.title("Gợi ý")
+            window.geometry("300x200")
+            self.cue_window = CueWindow(window)
+            
+            self.cue_window.root = window
+            if self.cue_window.timerFlag == False:
+                self.cue_window.label.pack(pady=20)
+                self.cue_window.image.pack(pady=20)
+                self.cue_window.timerFlag = True
+                self.cue_window.cueFlag = True
+                self.cue_window.set(3)
+                self.cue_window.update()
+                
+            
 # def add_border(root, nums_of_cols, nums_of_rows):
 #             for col in range(0, nums_of_cols):
 #                 border = CTk.CTkFrame(root, width=2, bg_color="blue")
 #                 border.grid(row=0, column=col, rowspan=nums_of_rows, sticky="ns", padx=(0, 10))
        
-class CueWindow: #TODO: implement cue windows when pressing "Thu dữ liệu"
-    def __init__(self, root) -> None:
-        self.root = root
-        self.root.title("Kịch bản")
-        self.root.geometry("1280x720")
-
+class CueWindow:
+    def __init__(self, root, recording_scheme) -> None:
+        self.root = root 
+        
         # Initiallize timer variables
         self.seconds = 0
         self.timerFlag = False
         self.cueFlag = False
         self.counter = 0
 
+        #Load action scheme
+        self.total_nums_of_actions = 0
+        self.rest_duration = 0
+        self.cue_duration = 0
+        self.action_duration = 0
+        for e in recording_scheme:
+            self.total_nums_of_actions += 1 
+            if self.rest_duration == 0:
+                if e[0] == Action.R:
+                    self.rest_duration = e[1]
+            
+            if  self.cue_duration == 0:
+                if e[0] == Action.C:
+                    self.cue_duration = e[1]
+            
+            if self.action_duration == 0:
+                if e[0] != Action.R and e[0] != Action.C:
+                   self.action_duration = e[1]
+            
+
+      
         # Create a countdown clock to display the timer
-        self.label = CTk.CTkLabel(root, text = '00:00', font=("Helvetica", 48))
-        self.label.pack(pady=20)
+        self.label = CTk.CTkLabel(self.root, text = '00:00', font=("Helvetica", 48))
+        
 
         # load cue images
         self.currentCue = 0
-        self.images = [CTk.CTkImage(light_image="images/arrow_left_foot.png"), 
-                       CTk.CTkImage(light_image="images/arrow_right_foot.png"), 
-                       CTk.CTkImage(light_image="images/arrow_left_hand.png"), 
-                       CTk.CTkImage(light_image="images/arrow_right_hand.png")]
-        self.image = CTk.CTkLabel(root, image=self.images[self.currentCue])
+        self.images = [CTk.CTkImage(light_image=Image.open("images/arrow_left_foot.png"),  size=(100, 100)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_right_foot.png"), size=(100, 100)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_left_hand.png"),  size=(100, 100)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_right_hand.png"), size=(100, 100))]
+        self.image = CTk.CTkLabel(self.root, image=self.images[self.currentCue], text="")
         # Update the timer display
         self.update()
         pass
 
-    def start(self):
-        if self.timerFlag == False:
-            self.timerFlag = True
-            self.cueFlag = True
-            self.set(3)
-            self.update()
-
     def stop(self):
-        self.flag = False
+        self.timerFlag = False
 
     def calculate(self):
         minutes = self.seconds // 60
         seconds = self.seconds % 60
-        time_str = f"{minutes:02}:{seconds:02}"
+        time_str = f"{minutes}:{seconds}"
         return time_str
 
     def update(self):
@@ -500,11 +555,11 @@ class CueWindow: #TODO: implement cue windows when pressing "Thu dữ liệu"
                 if self.counter != 39:
                     self.image.pack_forget()
                     self.currentCue = (self.currentCue + 1) % 4
-                    self.image.config(image=self.images[self.currentCue])
+                    self.image.configure(image=self.images[self.currentCue])
                     self.cueFlag = False
                     self.counter += 1
             time_str = self.calculate()
-            self.label.config(text=time_str)    
+            self.label.configure(text=time_str)    
         else:
             if self.counter != 39:
                 if self.seconds != 0:
@@ -513,7 +568,7 @@ class CueWindow: #TODO: implement cue windows when pressing "Thu dữ liệu"
                     self.seconds = 3
                     self.cueFlag = True
                 time_str = self.calculate()
-                self.label.config(text=time_str)
+                self.label.configure(text=time_str)
             else:
                 self.counter = 0
                 self.timerFlag = False
@@ -524,7 +579,7 @@ class CueWindow: #TODO: implement cue windows when pressing "Thu dữ liệu"
         minutes = self.seconds // 60
         seconds = self.seconds % 60
         time_str = f"{minutes:02}:{seconds:02}"
-        self.label.config(text=time_str)
+        self.label.configure(text=time_str)
 
 # Main loop
 app = App()
