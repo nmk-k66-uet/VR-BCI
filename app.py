@@ -287,13 +287,13 @@ class App(CTk.CTk):
             self.run_config_label.configure(text=cur, font=("Arial", 18))
             # generate_label_file()
             
-        self.rest_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian nghỉ (giây):", wraplength=150,font=("Arial", 18))
+        self.rest_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian nghỉ (giây):", wraplength=200,font=("Arial", 18))
         self.rest_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
-        self.cue_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian gợi ý (giây):", wraplength=150, font=("Arial", 18))
+        self.cue_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian gợi ý (giây):", wraplength=200, font=("Arial", 18))
         self.cue_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
-        self.action_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian thực hiện (giây):", wraplength=180, font=("Arial", 18))
+        self.action_duration_label = CTk.CTkLabel(self.recording_duration_config_frame, text="Thời gian thực hiện (giây):", wraplength=250, font=("Arial", 18))
         self.action_duration_entry = CTk.CTkEntry(self.recording_duration_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
         
         self.action_type_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="Hành động tiếp theo:", wraplength=180, font=("Arial", 18))
@@ -409,17 +409,19 @@ class App(CTk.CTk):
         self.recording_scheme_config_frame.grid(row=0, column=1, sticky="nsew")
         self.action_type_label.grid(row=0, column=0, columnspan=1)
         self.action_type_combo_box.grid(row=0, column=1, columnspan=1)
-        self.add_action_to_run_button.grid(row=1, column=0, columnspan=1, sticky="e", padx=(0,10))
-        self.remove_action_to_run_button.grid(row=1, column=1, columnspan=1, sticky="w", padx=(0,0))
+        # self.add_action_to_run_button.grid(row=1, column=0, columnspan=1, sticky="e", padx=(0,10))
+        # self.remove_action_to_run_button.grid(row=1, column=1, columnspan=1, sticky="w", padx=(0,10))
+        self.add_action_to_run_button.grid(row=1, column=0, columnspan=1)
+        self.remove_action_to_run_button.grid(row=1, column=1, columnspan=1)
         self.run_config_label.grid(row=2, column=0, columnspan=2)
         self.repeated_runs_label.grid(row=3, column=0, columnspan=1, sticky="nsew")
         self.repeated_runs_entry.grid(row=3, column=1, columnspan=1)
     
         self.recording_operation_frame.grid(row=0, column=2, sticky="nsew")
         self.trial_button.grid(row=0, column=0, columnspan=2)
-        self.recording_button.grid(row=1, column=0, columnspan=1, sticky="e", padx=10)
-        self.stop_recording_button.grid(row=1, column=1, columnspan=1, sticky="w", padx=10)
-        self.recording_progress_label.grid(row=2, column=0, columnspan=2,)
+        self.recording_button.grid(row=1, column=0, columnspan=1, padx=10)
+        self.stop_recording_button.grid(row=1, column=1, columnspan=1, padx=10)
+        self.recording_progress_label.grid(row=2, column=0, columnspan=2)
         # add_border(self.recording, 3, 8)
         #---------------------Cue Window---------------------#
         self.cue_window = None
