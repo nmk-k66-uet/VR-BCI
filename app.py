@@ -10,6 +10,10 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from PIL import Image
+import ctypes
+
+user32 = ctypes.windll.user32
+user32.SetProcessDPIAware()
 
 CTk.set_appearance_mode("light")
 CTk.set_default_color_theme("green")
@@ -39,15 +43,15 @@ class App(CTk.CTk):
         super().__init__()
         
         w, h = 1280, 720
-        ws = self.winfo_screenwidth()
-        hs = self.winfo_screenheight()
-        x = (ws/2) - (w/2)
-        y = (hs/2) - (h/2)
+        ws = user32.GetSystemMetrics(0)
+        hs = user32.GetSystemMetrics(1)
+        x = int(((ws-w)/2)/self._get_window_scaling())
+        y = int(((hs-h)/2)/self._get_window_scaling())
         
         # Main app configuration
         self.title("VR-BCI")
         self.resizable(False, False)
-        self.geometry('%dx%d+%d+%d'% (w, h, x/2, y/4))
+        self.geometry('%dx%d+%d+%d'% (w, h, x, y))
         self.iconbitmap("assets/icon/cat_icon.ico")
         #------------------------------------------------------#
         # Create tab view
