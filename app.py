@@ -192,7 +192,7 @@ class App(CTk.CTk):
         
         self.run_config_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="", font=("Arial", 18))
         self.repeated_runs_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="Số lần lặp lại kịch bản:", wraplength=180, font=("Arial", 18))
-        self.repeated_runs_entry = CTk.CTkEntry(self.recording_scheme_config_frame, placeholder_text="2", height=40, font=("Arial", 18))
+        self.repeated_runs_entry = CTk.CTkEntry(self.recording_scheme_config_frame, placeholder_text="1", height=40, font=("Arial", 18))
         
         #Recording stage:
         self.sampling_frequency = 128
@@ -391,18 +391,18 @@ class App(CTk.CTk):
                 sample, timestamp = self.inlet.pull_sample(timeout=0.0)
                 # print("Current action index: " + str(cur_action_index))
                 if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
-                    values = [  sample[3],  sample[4], 
-                                sample[5],  sample[14], 
-                                sample[15], sample[16], 
-                                sample[6],  sample[7], 
-                                sample[8],  sample[9],
-                                sample[17], sample[18], 
-                                sample[19], sample[10], 
-                                sample[11], sample[22], 
-                                sample[21], sample[20],
-                                sample[12], sample[13],
-                                sample[23], sample[24]] 
-                    data.append(values)
+                    # values = [  sample[3],  sample[4], 
+                    #             sample[5],  sample[14], 
+                    #             sample[15], sample[16], 
+                    #             sample[6],  sample[7], 
+                    #             sample[8],  sample[9],
+                    #             sample[17], sample[18], 
+                    #             sample[19], sample[10], 
+                    #             sample[11], sample[22], 
+                    #             sample[21], sample[20],
+                    #             sample[12], sample[13],
+                    #             sample[23], sample[24]] 
+                    data.append(sample[3:(len(sample)-1)])
                     sample_count += 1
                     print(timestamp)
 
@@ -471,20 +471,23 @@ class App(CTk.CTk):
             self.show_error_message(self, "Chưa có tên đối tượng thu dữ liệu")
         
     def init_cue_window(self):
-        window = CTk.CTkToplevel(self)
-        window.title("Gợi ý")
-        window.geometry("300x200")
-        self.cue_window = CueWindow(window)
-        
-        self.cue_window.root = window
-        if self.cue_window.timerFlag == False:
-            self.cue_window.label.pack(pady=20)
-            self.cue_window.image.pack(pady=20)
-            self.cue_window.timerFlag = True
-            self.cue_window.cueFlag = True
-            self.cue_window.set(3)
-            self.cue_window.update()
+            window = CTk.CTkToplevel(self)
+            window.title("Gợi ý")
+            window.geometry("300x200")
+            if (len(self.recording_scheme_per_run) == 0):
+                self.show_error_message(self, error_message="Hãy nhập kịch bản thu")
+            else:    
+                self.cue_window = CueWindow(window, self.recording_scheme_per_run, int(self.repeated_runs_entry.get()))
                 
+                self.cue_window.root = window
+                if self.cue_window.timerFlag == False:
+                    self.cue_window.label.pack(pady=20)
+                    self.cue_window.image.pack(pady=20)
+                    self.cue_window.timerFlag = True
+                    self.cue_window.set(self.recording_scheme_per_run[0][1])
+                    # self.cue_window.set(3)
+                    # self.cue_window.update()
+                    
             
 # def add_border(root, nums_of_cols, nums_of_rows):
 #             for col in range(0, nums_of_cols):
@@ -492,96 +495,106 @@ class App(CTk.CTk):
 #                 border.grid(row=0, column=col, rowspan=nums_of_rows, sticky="ns", padx=(0, 10))
        
 class CueWindow:
-    def __init__(self, root, recording_scheme) -> None:
+    def __init__(self, root, recording_scheme, nums_of_runs) -> None:
         self.root = root 
+        self.recording_scheme=[]
+        for i in range(0, nums_of_runs):
+            self.recording_scheme += recording_scheme
         
+        print(self.recording_scheme)
         # Initiallize timer variables
         self.seconds = 0
         self.timerFlag = False
         self.cueFlag = False
         self.counter = 0
 
-        #Load action scheme
-        self.total_nums_of_actions = 0
-        self.rest_duration = 0
-        self.cue_duration = 0
-        self.action_duration = 0
-        for e in recording_scheme:
-            self.total_nums_of_actions += 1 
-            if self.rest_duration == 0:
-                if e[0] == Action.R:
-                    self.rest_duration = e[1]
-            
-            if  self.cue_duration == 0:
-                if e[0] == Action.C:
-                    self.cue_duration = e[1]
-            
-            if self.action_duration == 0:
-                if e[0] != Action.R and e[0] != Action.C:
-                   self.action_duration = e[1]
-            
+        self.total_nums_of_actions = len(self.recording_scheme)
+      
         # Create a countdown clock to display the timer
         self.label = CTk.CTkLabel(self.root, text = '00:00', font=("Helvetica", 48))
-    
+        
         # load cue images
-        self.currentCue = 0
         self.images = [CTk.CTkImage(light_image=Image.open("images/arrow_left_foot.png"),  size=(100, 100)), 
                        CTk.CTkImage(light_image=Image.open("images/arrow_right_foot.png"), size=(100, 100)), 
                        CTk.CTkImage(light_image=Image.open("images/arrow_left_hand.png"),  size=(100, 100)), 
                        CTk.CTkImage(light_image=Image.open("images/arrow_right_hand.png"), size=(100, 100))]
-        self.image = CTk.CTkLabel(self.root, image=self.images[self.currentCue], text="")
+        self.image = CTk.CTkLabel(self.root, image=None, text="")
         # Update the timer display
         self.update()
         pass
 
     def stop(self):
-        self.timerFlag = False
+        self.counter = 0
+        self.timerFlag = 0 #stop timer
+        self.root.destroy()  
+        pass
 
     def calculate(self):
         minutes = self.seconds // 60
         seconds = self.seconds % 60
-        time_str = f"{minutes}:{seconds}"
+        time_str = f"{minutes:02}:{seconds:02}"
+        print(time_str)
         return time_str
 
     def update(self):
-        if self.timerFlag and self.cueFlag:
-            print(self.counter)
-            dt_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            print("date and time =", dt_string)
-            self.image.pack()
-            print("Cue type: " + str(self.currentCue))
-            if self.seconds != 0:
-                self.seconds -= 1
-            else:
-                self.seconds = 5
-                if self.counter != 39:
-                    self.image.pack_forget()
-                    self.currentCue = (self.currentCue + 1) % 4
-                    self.image.configure(image=self.images[self.currentCue])
-                    self.cueFlag = False
-                    self.counter += 1
+        if self.timerFlag:
             time_str = self.calculate()
-            self.label.configure(text=time_str)    
-        else:
-            if self.counter != 39:
+            self.label.configure(text=time_str)
+            if self.cueFlag: #Current view is cue
+                self.image.pack()
                 if self.seconds != 0:
                     self.seconds -= 1
                 else:
-                    self.seconds = 3
-                    self.cueFlag = True
-                time_str = self.calculate()
-                self.label.configure(text=time_str)
-            else:
-                self.counter = 0
-                self.timerFlag = False
+                    print("Current action: " + str(self.recording_scheme[self.counter][0]))
+                    self.counter += 1
+                    if self.counter != self.total_nums_of_actions: 
+
+                        self.set(self.recording_scheme[self.counter][1])
+                        self.image.pack_forget()
+                        print("Next action:"+ str(self.recording_scheme[self.counter][0]))
+                        self.cueFlag = False
+                    else: #end of scheme
+                       
+                        self.stop()
+                        pass   
+            else: #Current view is rest or action
+                    if self.seconds != 0:
+                        self.seconds -= 1
+                    else:
+                        print("Current action: " + str(self.recording_scheme[self.counter][0]))
+                        self.counter += 1
+                        if self.counter != self.total_nums_of_actions:
+                            print("Next action:"+ str(self.recording_scheme[self.counter][0]))
+                            self.set(self.recording_scheme[self.counter][1]) # next segment
+                            print(self.recording_scheme[self.counter][0])
+                        
+                            if self.recording_scheme[self.counter][0] == Action.C: #next segment is C
+                                self.getCueImage(self.recording_scheme[self.counter+1][0]) #get cue image based on next action
+                                self.cueFlag = True
+                        else: #end of scheme
+                            self.stop()
+                            pass
         self.root.after(1000, self.update) # Update timer after 1s
-    
-    def set(self, amount=5):
+        
+    def getCueImage(self, actionType):
+        print("Getting image...")
+        if actionType == Action.LF:
+            self.image.configure(image=self.images[0])
+        
+        if actionType == Action.RF:
+            self.image.configure(image=self.images[1])
+        
+        if actionType == Action.LH:
+            self.image.configure(image=self.images[2])
+        
+        if actionType == Action.RH:
+            self.image.configure(image=self.images[3])
+        
+        self.image.configure(image=None)
+        
+    def set(self, amount):
         self.seconds = amount
-        minutes = self.seconds // 60
-        seconds = self.seconds % 60
-        time_str = f"{minutes:02}:{seconds:02}"
-        self.label.configure(text=time_str)
+
 
 # Main loop
 app = App()
