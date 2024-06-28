@@ -15,8 +15,8 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.model_selection import train_test_split
 
 import models 
-# from preprocess import get_data
-from test1 import get_data
+from preprocess import get_data
+# from test1 import get_data
 # from keras.utils.vis_utils import plot_model
 
 #%% Training 
@@ -67,7 +67,7 @@ def train(dataset_conf, train_conf, results_path):
         
         # Get training and test data
         X_train, _, y_train_onehot, _, _, _ = get_data(
-            data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard, isShuffle=False)
+            data_path, sub, dataset, LOSO = LOSO, isStandard = isStandard)
          
         # Divide the training data into training and validation
         X_train, X_val, y_train_onehot, y_val_onehot = train_test_split(X_train, y_train_onehot, test_size=0.2, random_state=42)       
@@ -253,12 +253,12 @@ def test(model, dataset_conf, results_path, allRuns = True):
     
     
 #%%
-def run(mode = "Train"):
+def run(mode = "Train", model):
     # Define dataset parameters
     dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
     # print(os.getcwd())
     if dataset == 'BCI2a': 
-        in_samples = 512
+        in_samples = 1125
         n_channels = 22
         n_sub = 9
         n_classes = 4
@@ -289,11 +289,11 @@ def run(mode = "Train"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 32, 'epochs': 500, 'patience': 300, 'lr': 0.001,'n_train': 1,
-                  'LearnCurves': True, 'from_logits': False, 'model':'ATCNet'}
+    train_conf = { 'batch_size': 64, 'epochs': 500, 'patience': 100, 'lr': 0.001,'n_train': 1,
+                  'LearnCurves': True, 'from_logits': False, 'model':model}
 
     # Create a folder to store the results of the experiment
-    results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model'))
+    results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model')) + "_paper"
     if not os.path.exists(results_path):
       os.makedirs(results_path)   # Create a new directory if it does not exist 
 
@@ -309,5 +309,7 @@ def run(mode = "Train"):
 
 #%%
 if __name__ == "__main__":
-    run("Train")
-    run("Test")
+    models = ["ATCNet"; "TCNet_Fusion"; "EEGTCNet"; "MBEEG_SENet"; "EEGNeX_8_32"; "EEGNet"; "DeepConvNet"; "ShallowConvNet"]
+    for model in models:
+        run("Train", model)
+        run("Test", model)
