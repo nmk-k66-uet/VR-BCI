@@ -194,7 +194,7 @@ class App(CTk.CTk):
         self.add_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Thêm",font=("Arial", 18),  command=self.add_action, height=40, width=100)
         self.remove_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Bớt",font=("Arial", 18),  command=self.remove_action, height=40, width=100)
         
-        self.run_config_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="", font=("Arial", 18))
+        self.run_config_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="", wraplength=200, font=("Arial", 18))
         self.repeated_runs_label = CTk.CTkLabel(self.recording_scheme_config_frame, text="Số lần lặp lại kịch bản:", wraplength=180, font=("Arial", 18))
         self.repeated_runs_entry = CTk.CTkEntry(self.recording_scheme_config_frame, placeholder_text="1", height=40, font=("Arial", 18))
         self.repeated_runs = 0
@@ -331,7 +331,7 @@ class App(CTk.CTk):
             self.recording_scheme_per_run.append(action)
             self.update_run_config() #add the last action added to the representition string
         else:
-            self.show_error_message(self, "Thời lượng thực hiện hành động không xác định")
+            self.show_error_message("Thời lượng thực hiện hành động không xác định")
                          
     def remove_action(self):
         if len(self.recording_scheme_per_run) != 0:
@@ -448,11 +448,12 @@ class App(CTk.CTk):
         df.to_csv("data" + f"/{self.get_file_path('csv')}", index = False)
             
     def pull_eeg_data(self):
+        data = []
         for i in range(0, self.repeated_runs):
             global recording_in_progress
             cur_action_index = 0
             sample_count = 0
-            data = []
+            
             while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
                 sample, timestamp = self.inlet.pull_sample(timeout=0.0)
                 # print("Current action index: " + str(cur_action_index))
@@ -489,11 +490,11 @@ class App(CTk.CTk):
     def start_recording(self):
         global recording_in_progress
         if self.eeg_connection_flag.get() == 0:
-            self.show_error_message(self,"Không có kết nối với mũ thu EEG")
+            self.show_error_message("Không có kết nối với mũ thu EEG")
         else:
             recording_in_progress = True
             self.start_eeg_thread()
-            # init_cue_window(self)
+            self.init_cue_window()
             self.recording_progress_label.configure(text="Đang thu dữ liệu...", font=("Arial", 18))
             
     def stop_recording(self):
@@ -534,21 +535,40 @@ class App(CTk.CTk):
             file_path = self.name_entry.get() + "_" + datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
             return file_path
         else:
-            self.show_error_message(self, "Chưa có tên đối tượng thu dữ liệu")
-        
+            self.show_error_message("Chưa có tên đối tượng thu dữ liệu")
+
     def init_cue_window(self):
             window = CTk.CTkToplevel(self)
             window.title("Gợi ý")
-            window.geometry("300x200")
+
+            w, h = 1280, 720
+            ws = user32.GetSystemMetrics(0)
+            hs = user32.GetSystemMetrics(1)
+            x = int(((ws-w)/2)/window._get_window_scaling())
+            y = int(((hs-h)/2)/window._get_window_scaling())
+            print(w, h, x, y)
+            
+            # Main app configuration
+            window.title("VR-BCI")
+            window.resizable(False, False)
+            window.geometry('%dx%d+%d+%d'% (w, h, x, y))
+            window.attributes("-topmost", True)
+
+            window.grid_columnconfigure(0, weight=1)
+            window.grid_rowconfigure(0, weight=1)
+            window.grid_rowconfigure(1, weight=14)
+            window.grid_rowconfigure(2, weight=1)
+            
             if (len(self.recording_scheme_per_run) == 0):
-                self.show_error_message(self, error_message="Hãy nhập kịch bản thu")
+                self.show_error_message(error_message="Hãy nhập kịch bản thu")
             else:    
                 self.cue_window = CueWindow(window, self.recording_scheme_per_run, self.repeated_runs)
                 
                 self.cue_window.root = window
                 if self.cue_window.timerFlag == False:
-                    self.cue_window.label.pack(pady=20)
-                    self.cue_window.image.pack(pady=20)
+                    self.cue_window.label.grid(row=0, sticky="n")
+                    self.cue_window.image.grid(row=1, sticky="swen")
+                    self.cue_window.instruction.grid(row=1, sticky="we")
                     self.cue_window.timerFlag = True
                     self.cue_window.set(self.recording_scheme_per_run[0][1])
                     # self.cue_window.set(3)
@@ -580,11 +600,12 @@ class CueWindow:
         self.label = CTk.CTkLabel(self.root, text = '00:00', font=("Helvetica", 48))
         
         # load cue images
-        self.images = [CTk.CTkImage(light_image=Image.open("images/arrow_left_foot.png"),  size=(100, 100)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_right_foot.png"), size=(100, 100)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_left_hand.png"),  size=(100, 100)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_right_hand.png"), size=(100, 100))]
+        self.images = [CTk.CTkImage(light_image=Image.open("images/arrow_left_foot.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_right_foot.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_left_hand.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("images/arrow_right_hand.png"), size=(900, 550))]
         self.image = CTk.CTkLabel(self.root, image=None, text="")
+        self.instruction = CTk.CTkLabel(self.root, text="", font=("Helvetica", 48))
         # Update the timer display
         self.update()
         pass
@@ -607,7 +628,7 @@ class CueWindow:
             time_str = self.calculate()
             self.label.configure(text=time_str)
             if self.cueFlag: #Current view is cue
-                self.image.pack()
+                self.image.grid(row=1, sticky="we")
                 if self.seconds != 0:
                     self.seconds -= 1
                 else:
@@ -616,19 +637,25 @@ class CueWindow:
                     if self.counter != self.total_nums_of_actions: 
 
                         self.set(self.recording_scheme[self.counter][1])
-                        self.image.pack_forget()
+                        self.image.grid_forget()
                         print("Next action:"+ str(self.recording_scheme[self.counter][0]))
                         self.cueFlag = False
                     else: #end of scheme
                        
                         self.stop()
                         pass   
+                    self.root.after(1, self.update)
+                    return
             else: #Current view is rest or action
+                    self.instruction.grid(row=1, sticky="we")
+                    if (self.recording_scheme[self.counter][0] == Action.R): self.instruction.configure(text="Nghỉ")
+                    else: self.instruction.configure(text="Thực hiện hành động")
                     if self.seconds != 0:
                         self.seconds -= 1
                     else:
                         print("Current action: " + str(self.recording_scheme[self.counter][0]))
                         self.counter += 1
+                        self.instruction.grid_forget()
                         if self.counter != self.total_nums_of_actions:
                             print("Next action:"+ str(self.recording_scheme[self.counter][0]))
                             self.set(self.recording_scheme[self.counter][1]) # next segment
@@ -640,6 +667,8 @@ class CueWindow:
                         else: #end of scheme
                             self.stop()
                             pass
+                        self.root.after(1, self.update)
+                        return
         self.root.after(1000, self.update) # Update timer after 1s
         
     def getCueImage(self, actionType):
