@@ -12,6 +12,7 @@ import pandas as pd
 from datetime import datetime
 from PIL import Image
 import ctypes
+from playsound import playsound
 
 user32 = ctypes.windll.user32
 user32.SetProcessDPIAware()
@@ -47,11 +48,11 @@ class App(CTk.CTk):
         w, h = 1280, 720
         ws = user32.GetSystemMetrics(0)
         hs = user32.GetSystemMetrics(1)
-        print(ws, hs)
-        print(self._get_window_scaling())
+        # print(ws, hs)
+        # print(self._get_window_scaling())
         x = int(((ws-w)/2)/self._get_window_scaling())
         y = int(((hs-h)/2)/self._get_window_scaling())
-        print(w, h, x, y)
+        # print(w, h, x, y)
         
         # Main app configuration
         self.title("VR-BCI")
@@ -84,7 +85,7 @@ class App(CTk.CTk):
         
         self.settings.grid_columnconfigure(0, weight=1)
         self.settings.grid_rowconfigure(0, weight=1)
-        
+ 
         #-------------------------Home--------------------------#
         #Layout
         self.home_connection_frame = CTk.CTkFrame(master=self.home, fg_color="light blue")
@@ -255,8 +256,8 @@ class App(CTk.CTk):
         else:
             print("Looking for a stream...")
             self.eeg_stream = resolve_stream('type', 'EEG')
-            self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
-            print(self.inlet)
+            # self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
+            # print(self.inlet)
             # print(self.inlet.pull_sample())
             self.eeg_connection_switch.configure(text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
           
@@ -338,7 +339,7 @@ class App(CTk.CTk):
             self.recording_scheme_per_run.pop()
             self.update_run_config()
         else: 
-            pass
+            return
 
     def update_run_config(self): 
         self.rest_duration = int(self.rest_duration_entry.get())
@@ -433,11 +434,11 @@ class App(CTk.CTk):
             },
             "num_of_runs": self.repeated_runs           
         }
-        with open("data" + f"/{self.get_file_path('json')}", "w") as file:
-            json.dump(setting, file)
+        with open(f"{self.get_file_path('json')}", "w") as file:
+            json.dump(setting, file)       
                         
     def generate_label_file(self): #Call when recording is finished
-        with open("data" + f"/{self.get_file_path('txt')}", "w") as file:
+        with open(f"{self.get_file_path('txt')}", "w") as file:
             for i in range(0, self.repeated_runs):
                 for action in self.recording_scheme_per_run:
                     file.write(f"{action[0].value}")
@@ -445,14 +446,20 @@ class App(CTk.CTk):
     def generate_data_file(self, data):
         data = np.array(data)
         df = pd.DataFrame(data)
-        df.to_csv("data" + f"/{self.get_file_path('csv')}", index = False)
+        df.to_csv(f"{self.get_file_path('csv')}", index = False)
             
     def pull_eeg_data(self):
+        self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
+        print(self.inlet)
+        self.update_run_config()
+        self.inlet.open_stream()
         data = []
+        # self.inlet.open_stream()
         for i in range(0, self.repeated_runs):
             global recording_in_progress
             cur_action_index = 0
             sample_count = 0
+            trial_first_sample_timestamp = 0 #used for testing
             
             while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
                 sample, timestamp = self.inlet.pull_sample(timeout=0.0)
@@ -471,16 +478,30 @@ class App(CTk.CTk):
                     #             sample[23], sample[24]] 
                     data.append(sample[3:(len(sample)-1)])
                     sample_count += 1
-                    print(timestamp)
+                    
+                    #used for testing sync between UI and sample pull
+                    if trial_first_sample_timestamp == 0:
+                        trial_first_sample_timestamp = timestamp
+                        print("Timestamp of first sample for this action: " + str(trial_first_sample_timestamp))
+                    # print(timestamp)
 
                 if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_frequency: #All samples of an action recorded
                     sample_count = 0
                     cur_action_index = cur_action_index + 1
-        recording_in_progress = False
+                    print(cur_action_index)
+
+                    print("Timestamp of last sample for this action: " + str(timestamp))
+                    print("Duration between first and last sample: " + str(trial_first_sample_timestamp - timestamp))
+                    trial_first_sample_timestamp = 0
+       
         self.generate_label_file()
         self.generate_data_file(data)
         self.generate_setting_file()
         self.recording_progress_label.configure(text="Hoàn thành thu dữ liệu")
+
+        # self.inlet.close_stream() 
+        self.stop_recording()
+        data = []
 
     def start_eeg_thread(self):
         if self.eeg_thread is None or not self.eeg_thread.is_alive():
@@ -500,6 +521,13 @@ class App(CTk.CTk):
     def stop_recording(self):
         global recording_in_progress
         recording_in_progress = False
+        self.inlet.close_stream()
+        self.inlet = None
+        print(self.eeg_thread)
+        del(self.eeg_thread)
+        self.eeg_thread = None
+
+        
 
     #----------------------Settings----------------------#
     # Light and Dark Mode switch
@@ -529,10 +557,14 @@ class App(CTk.CTk):
         #     folder_selected = filedialog.askdirectory()
         #     if folder_selected:
         #         return f"{folder_selected}"
-        
+
     def get_file_path(self, file_type): #TODO: get the folder directory that the user chooses
-        if self.name_entry.get() != "": 
-            file_path = self.name_entry.get() + "_" + datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
+        if self.name_entry.get() != "":
+            dir_path = "data/" + self.name_entry.get()
+            if os.path.isdir(dir_path) == False: 
+                os.makedirs(dir_path)
+                print("Directory created")
+            file_path = dir_path + "/" + self.name_entry.get() + "_" + datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
             return file_path
         else:
             self.show_error_message("Chưa có tên đối tượng thu dữ liệu")
@@ -571,8 +603,6 @@ class App(CTk.CTk):
                     self.cue_window.instruction.grid(row=1, sticky="we")
                     self.cue_window.timerFlag = True
                     self.cue_window.set(self.recording_scheme_per_run[0][1])
-                    # self.cue_window.set(3)
-                    # self.cue_window.update()
                     
             
 # def add_border(root, nums_of_cols, nums_of_rows):
@@ -588,6 +618,7 @@ class CueWindow:
             self.recording_scheme += recording_scheme
         
         print(self.recording_scheme)
+
         # Initiallize timer variables
         self.seconds = 0
         self.timerFlag = False
@@ -635,21 +666,22 @@ class CueWindow:
                     print("Current action: " + str(self.recording_scheme[self.counter][0]))
                     self.counter += 1
                     if self.counter != self.total_nums_of_actions: 
-
                         self.set(self.recording_scheme[self.counter][1])
                         self.image.grid_forget()
                         print("Next action:"+ str(self.recording_scheme[self.counter][0]))
                         self.cueFlag = False
+                        # self.voiceThread = threading.Thread(target=self.activeVoice, args=(self.recording_scheme[self.counter][0],)).start()
                     else: #end of scheme
-                       
                         self.stop()
                         pass   
                     self.root.after(1, self.update)
                     return
             else: #Current view is rest or action
                     self.instruction.grid(row=1, sticky="we")
-                    if (self.recording_scheme[self.counter][0] == Action.R): self.instruction.configure(text="Nghỉ")
-                    else: self.instruction.configure(text="Thực hiện hành động")
+                    if (self.recording_scheme[self.counter][0] == Action.R): 
+                        self.instruction.configure(text="Nghỉ")
+                    else: 
+                        self.instruction.configure(text="Thực hiện hành động")
                     if self.seconds != 0:
                         self.seconds -= 1
                     else:
@@ -660,10 +692,11 @@ class CueWindow:
                             print("Next action:"+ str(self.recording_scheme[self.counter][0]))
                             self.set(self.recording_scheme[self.counter][1]) # next segment
                             print(self.recording_scheme[self.counter][0])
-                        
                             if self.recording_scheme[self.counter][0] == Action.C: #next segment is C
                                 self.getCueImage(self.recording_scheme[self.counter+1][0]) #get cue image based on next action
                                 self.cueFlag = True
+                            # self.voiceThread = threading.Thread(target=self.activeVoice, args=(self.recording_scheme[self.counter][0],)).start()
+                            # self.activeVoice(self.recording_scheme[self.counter][0])
                         else: #end of scheme
                             self.stop()
                             pass
@@ -689,7 +722,6 @@ class CueWindow:
         
     def set(self, amount):
         self.seconds = amount
-
 
 # Main loop
 app = App()
