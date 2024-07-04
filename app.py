@@ -61,7 +61,7 @@ class App(CTk.CTk):
         self.iconbitmap("assets/icon/cat_icon.ico")
         #------------------------------------------------------#
         # Create tab view
-        self.tabs = CTk.CTkTabview(self, width=1280, height=720)
+        self.tabs = CTk.CTkTabview(self, width=w, height=h)
         self.tabs.pack(expand=True, fill="both")
 
         # Create tabs
@@ -69,7 +69,11 @@ class App(CTk.CTk):
         self.recording = self.tabs.add("Thu dữ liệu")
         self.training = self.tabs.add(" Luyện tập ")
         self.settings = self.tabs.add("  Cài đặt  ")
-        
+
+        self.tabs._segmented_button._buttons_dict[" Trang chủ "].configure(font=("Arial", 24))
+        self.tabs._segmented_button._buttons_dict["Thu dữ liệu"].configure(font=("Arial", 24))
+        self.tabs._segmented_button._buttons_dict[" Luyện tập "].configure(font=("Arial", 24))
+        self.tabs._segmented_button._buttons_dict["  Cài đặt  "].configure(font=("Arial", 24))
         #Grid configuration
         self.home.grid_columnconfigure(0, weight=2)
         self.home.grid_columnconfigure(1, weight=1)
@@ -89,26 +93,28 @@ class App(CTk.CTk):
         #-------------------------Home--------------------------#
         #Layout
         self.home_connection_frame = CTk.CTkFrame(master=self.home, fg_color="light blue")
+        self.home_connection_frame_label = CTk.CTkLabel(master=self.home_connection_frame,  text="Thiết lập kết nối", font=("Arial", 24))
         self.home_connection_frame.grid_rowconfigure(0, weight=1)
         self.home_connection_frame.grid_rowconfigure(1, weight=1)
-        self.home_connection_frame.grid_rowconfigure(2, weight=4)
+        self.home_connection_frame.grid_rowconfigure(2, weight=1)
+        self.home_connection_frame.grid_rowconfigure(3, weight=4)
         self.home_connection_frame.grid_columnconfigure(0, weight=1)
     
-        
         self.home_patient_info_frame = CTk.CTkFrame(master=self.home, fg_color="SpringGreen2")
+        self.home_patient_info_frame_label = CTk.CTkLabel(master=self.home_patient_info_frame, text="Thông tin bệnh nhân", font=("Arial", 24))
         self.home_patient_info_frame.grid_columnconfigure(0, weight=1)
         self.home_patient_info_frame.grid_columnconfigure(1, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(0, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(1, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(2, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(3, weight=1)
-        self.home_patient_info_frame.grid_rowconfigure(4, weight=8)
+        self.home_patient_info_frame.grid_rowconfigure(4, weight=1)
+        self.home_patient_info_frame.grid_rowconfigure(5, weight=8)
         #EEG Stream connection
         self.eeg_stream = None #LSL Stream for emotiv connection
         self.inlet = None #InletStream
 
         self.eeg_connection_flag = CTk.IntVar(value=0)
-
         self.eeg_connection_switch = CTk.CTkSwitch(self.home_connection_frame, text="Kết nối thiết bị Emotiv", font=("Arial", 18),
                                     command=self.toggle_eeg_connection, variable=self.eeg_connection_flag,
                                     onvalue=1, offvalue=0,
@@ -138,42 +144,50 @@ class App(CTk.CTk):
         self.submit_button = CTk.CTkButton(self.home_patient_info_frame, text="Gửi", font=("Arial", 18), command=self.submit)
         
         self.home_connection_frame.grid(row=0, column=0,rowspan=5, sticky="nsew")
-        self.eeg_connection_switch.grid(row=0, column=0, columnspan=1)
-        self.vr_connection.grid(row=1, column=0, columnspan=1)
+        self.home_connection_frame_label.grid(row=0, column=0, columnspan=1, sticky="n", pady=(30, 0))
+        self.eeg_connection_switch.grid(row=1, column=0, columnspan=1)
+        self.vr_connection.grid(row=2, column=0, columnspan=1)
         
         self.home_patient_info_frame.grid(row=0, column=1, rowspan=5, sticky="nsew")
-        self.patient_image_label.grid(row=0, column=0, rowspan=4, sticky="e")
-        self.name_entry.grid(row=0, column=1, columnspan=1)
-        self.age_entry.grid(row=1, column=1, columnspan=1)
-        self.gender_options.grid(row=2, column=1, columnspan=1)
-        self.submit_button.grid(row=3, column=1, columnspan=1)
+        self.home_patient_info_frame_label.grid(row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
+        self.patient_image_label.grid(row=1, column=0, rowspan=4, sticky="e")
+        self.name_entry.grid(row=1, column=1, columnspan=1)
+        self.age_entry.grid(row=2, column=1, columnspan=1)
+        self.gender_options.grid(row=3, column=1, columnspan=1)
+        self.submit_button.grid(row=4, column=1, columnspan=1)
 
         #----------------------Recording----------------------#
         #Layout
         self.recording_duration_config_frame = CTk.CTkFrame(master=self.recording, fg_color="light blue")
+        self.recording_duration_config_frame_label = CTk.CTkLabel(master=self.recording_duration_config_frame, text="Thiết lập thời gian", font=("Arial", 24))
         self.recording_duration_config_frame.grid_columnconfigure(0, weight=3)
         self.recording_duration_config_frame.grid_columnconfigure(1, weight=1)
         self.recording_duration_config_frame.grid_rowconfigure(0, weight=1)
         self.recording_duration_config_frame.grid_rowconfigure(1, weight=1)
         self.recording_duration_config_frame.grid_rowconfigure(2, weight=1)
-        self.recording_duration_config_frame.grid_rowconfigure(3, weight=6)
+        self.recording_duration_config_frame.grid_rowconfigure(3, weight=1)
+        self.recording_duration_config_frame.grid_rowconfigure(4, weight=6)
         
         self.recording_scheme_config_frame = CTk.CTkFrame(master=self.recording, fg_color="aquamarine")
+        self.recording_scheme_config_frame_label = CTk.CTkLabel(master=self.recording_scheme_config_frame, text="Thiết lập kịch bản", font=("Arial", 24))
         self.recording_scheme_config_frame.grid_columnconfigure(0, weight=1)
         self.recording_scheme_config_frame.grid_columnconfigure(1, weight=1)
         self.recording_scheme_config_frame.grid_rowconfigure(0, weight=1)
         self.recording_scheme_config_frame.grid_rowconfigure(1, weight=1)
         self.recording_scheme_config_frame.grid_rowconfigure(2, weight=1)
         self.recording_scheme_config_frame.grid_rowconfigure(3, weight=1)
-        self.recording_scheme_config_frame.grid_rowconfigure(4, weight=4)
+        self.recording_scheme_config_frame.grid_rowconfigure(4, weight=1)
+        self.recording_scheme_config_frame.grid_rowconfigure(5, weight=4)
         
         self.recording_operation_frame = CTk.CTkFrame(master=self.recording, fg_color="khaki")
+        self.recording_operation_frame_label = CTk.CTkLabel(master=self.recording_operation_frame, text="Thu dữ liệu", font=("Arial", 24))
         self.recording_operation_frame.grid_columnconfigure(0, weight=1)
         self.recording_operation_frame.grid_columnconfigure(1, weight=1)
         self.recording_operation_frame.grid_rowconfigure(0, weight=1)
         self.recording_operation_frame.grid_rowconfigure(1, weight=1)
         self.recording_operation_frame.grid_rowconfigure(2, weight=1)
-        self.recording_operation_frame.grid_rowconfigure(3, weight=3)
+        self.recording_operation_frame.grid_rowconfigure(3, weight=1)
+        self.recording_operation_frame.grid_rowconfigure(4, weight=4)
         
         #Run configuration stage:
         self.recording_scheme_per_run = []
@@ -212,27 +226,30 @@ class App(CTk.CTk):
         self.recording_progress_label = CTk.CTkLabel(self.recording_operation_frame, text="", font=("Arial", 18))
         
         self.recording_duration_config_frame.grid(row=0, column=0, sticky="nsew")
-        self.rest_duration_label.grid(row=0, column=0, columnspan=1, sticky="nsew")
-        self.rest_duration_entry.grid(row=0, column=1, columnspan=1)
-        self.cue_duration_label.grid(row=1, column=0, columnspan=1, sticky="nsew")
-        self.cue_duration_entry.grid(row=1, column=1, columnspan=1)
-        self.action_duration_label.grid(row=2, column=0, columnspan=1, sticky="nsew")
-        self.action_duration_entry.grid(row=2, column=1, columnspan=1)
+        self.recording_duration_config_frame_label.grid(row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
+        self.rest_duration_label.grid(row=1, column=0, columnspan=1, sticky="nsew")
+        self.rest_duration_entry.grid(row=1, column=1, columnspan=1)
+        self.cue_duration_label.grid(row=2, column=0, columnspan=1, sticky="nsew")
+        self.cue_duration_entry.grid(row=2, column=1, columnspan=1)
+        self.action_duration_label.grid(row=3, column=0, columnspan=1, sticky="nsew")
+        self.action_duration_entry.grid(row=3, column=1, columnspan=1)
         
         self.recording_scheme_config_frame.grid(row=0, column=1, sticky="nsew")
-        self.action_type_label.grid(row=0, column=0, columnspan=1)
-        self.action_type_combo_box.grid(row=0, column=1, columnspan=1)
-        self.add_action_to_run_button.grid(row=1, column=0, columnspan=1)
-        self.remove_action_to_run_button.grid(row=1, column=1, columnspan=1)
-        self.run_config_label.grid(row=2, column=0, columnspan=2)
-        self.repeated_runs_label.grid(row=3, column=0, columnspan=1, sticky="nsew")
-        self.repeated_runs_entry.grid(row=3, column=1, columnspan=1)
+        self.recording_scheme_config_frame_label.grid(row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
+        self.action_type_label.grid(row=1, column=0, columnspan=1)
+        self.action_type_combo_box.grid(row=1, column=1, columnspan=1)
+        self.add_action_to_run_button.grid(row=2, column=0, columnspan=1)
+        self.remove_action_to_run_button.grid(row=2, column=1, columnspan=1)
+        self.run_config_label.grid(row=3, column=0, columnspan=2)
+        self.repeated_runs_label.grid(row=4, column=0, columnspan=1, sticky="nsew")
+        self.repeated_runs_entry.grid(row=4, column=1, columnspan=1)
     
         self.recording_operation_frame.grid(row=0, column=2, sticky="nsew")
-        self.trial_button.grid(row=0, column=0, columnspan=2)
-        self.recording_button.grid(row=1, column=0, columnspan=1, padx=10)
-        self.stop_recording_button.grid(row=1, column=1, columnspan=1, padx=10)
-        self.recording_progress_label.grid(row=2, column=0, columnspan=2)
+        self.recording_operation_frame_label.grid(row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
+        self.trial_button.grid(row=1, column=0, columnspan=2, sticky="n")
+        self.recording_button.grid(row=2, column=0, columnspan=1, padx=10, sticky="n", pady=(0, 0))
+        self.stop_recording_button.grid(row=2, column=1, columnspan=1, padx=10, sticky="n", pady=(0, 0))
+        self.recording_progress_label.grid(row=3, column=0, columnspan=2)
         # add_border(self.recording, 3, 8)
 
         #---------------------Cue Window---------------------#
@@ -570,6 +587,7 @@ class App(CTk.CTk):
             self.show_error_message("Chưa có tên đối tượng thu dữ liệu")
 
     def init_cue_window(self):
+            self.update_run_config()
             window = CTk.CTkToplevel(self)
             window.title("Gợi ý")
 
@@ -618,12 +636,15 @@ class CueWindow:
             self.recording_scheme += recording_scheme
         
         print(self.recording_scheme)
+        self.voiceThread = None
+        self.soundPath = u"sounds/beep-104060.mp3"
 
         # Initiallize timer variables
         self.seconds = 0
         self.timerFlag = False
         self.cueFlag = False
         self.counter = 0
+        
 
         self.total_nums_of_actions = len(self.recording_scheme)
       
@@ -669,7 +690,7 @@ class CueWindow:
                         self.set(self.recording_scheme[self.counter][1])
                         self.image.grid_forget()
                         print("Next action:"+ str(self.recording_scheme[self.counter][0]))
-                        self.cueFlag = False
+                        self.cueFlag = False 
                         # self.voiceThread = threading.Thread(target=self.activeVoice, args=(self.recording_scheme[self.counter][0],)).start()
                     else: #end of scheme
                         self.stop()
@@ -678,9 +699,11 @@ class CueWindow:
                     return
             else: #Current view is rest or action
                     self.instruction.grid(row=1, sticky="we")
-                    if (self.recording_scheme[self.counter][0] == Action.R): 
+                    if (self.recording_scheme[self.counter][0] == Action.R and self.seconds == self.recording_scheme[self.counter][1]): 
                         self.instruction.configure(text="Nghỉ")
-                    else: 
+                        self.voiceThread = threading.Thread(target=playsound, args=(self.soundPath,)).start()
+                        # playsound(u"sounds/beep-104060.mp3")
+                    elif (self.seconds == self.recording_scheme[self.counter][1]): 
                         self.instruction.configure(text="Thực hiện hành động")
                     if self.seconds != 0:
                         self.seconds -= 1
