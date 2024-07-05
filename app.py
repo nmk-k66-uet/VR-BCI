@@ -472,7 +472,7 @@ class App(CTk.CTk):
         df = pd.DataFrame(data)
         df.to_csv(f"{self.get_file_path('csv')}", index = False)
             
-    def pull_eeg_data(self):
+    def pull_eeg_data(self): #TODO: sync sample pull with system clock with the lowest error margin possible (<1ms)
         self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
         print(self.inlet)
         self.update_run_config()
@@ -486,8 +486,7 @@ class App(CTk.CTk):
             trial_first_sample_timestamp = 0 #used for testing
             
             while recording_in_progress and cur_action_index < len(self.recording_scheme_per_run):
-                sample, timestamp = self.inlet.pull_sample(timeout=0.0)
-                # print("Current action index: " + str(cur_action_index))
+                sample, timestamp = self.inlet.pull_sample()
                 if timestamp != None: #Depends on the mapping of electrodes on the EEG devices
                     # values = [  sample[3],  sample[4], 
                     #             sample[5],  sample[14], 
@@ -500,7 +499,7 @@ class App(CTk.CTk):
                     #             sample[21], sample[20],
                     #             sample[12], sample[13],
                     #             sample[23], sample[24]] 
-                    data.append(sample[3:(len(sample)-1)])
+                    data.append(sample[3:(len(sample)-2)])
                     sample_count += 1
                     
                     #used for testing sync between UI and sample pull
@@ -538,8 +537,9 @@ class App(CTk.CTk):
             self.show_error_message("Không có kết nối với mũ thu EEG")
         else:
             recording_in_progress = True
-            self.start_eeg_thread()
+            
             self.init_cue_window()
+            self.start_eeg_thread()
             self.recording_progress_label.configure(text="Đang thu dữ liệu...", font=("Arial", 18))
             
     def stop_recording(self):
@@ -666,7 +666,8 @@ class CueWindow:
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(self.root, text="", font=("Helvetica", 48))
         # Update the timer display
-        self.play_sound(self.voice_content)
+        self.voice_thread = threading.Thread(target=self.play_sound,args=(self.voice_content
+                                                                              , ),  daemon=True).start()                                                                               
         self.update()
         pass
 
@@ -711,7 +712,7 @@ class CueWindow:
                     else: #end of scheme
                         self.stop()
                         pass   
-                    self.root.after(1, self.update)
+                    self.root.after(0, self.update)
                     return
             else: #Current view is rest or action
                     self.instruction.grid(row=1, sticky="we")
