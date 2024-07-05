@@ -129,7 +129,7 @@ class App(CTk.CTk):
                                     switch_width=48, switch_height=27)
 
         #Patient entry field
-        self.patient_image = CTk.CTkImage(light_image=Image.open("images/patient_placeholder.png"), size=(200, 200))
+        self.patient_image = CTk.CTkImage(light_image=Image.open("assets/images/patient_placeholder.png"), size=(200, 200))
         self.patient_image_label = CTk.CTkLabel(self.home_patient_info_frame, image= self.patient_image, text="")
         #TODO: add choose and save image option
 
@@ -187,7 +187,8 @@ class App(CTk.CTk):
         self.recording_operation_frame.grid_rowconfigure(1, weight=1)
         self.recording_operation_frame.grid_rowconfigure(2, weight=1)
         self.recording_operation_frame.grid_rowconfigure(3, weight=1)
-        self.recording_operation_frame.grid_rowconfigure(4, weight=4)
+        self.recording_operation_frame.grid_rowconfigure(4, weight=6)
+
         
         #Run configuration stage:
         self.recording_scheme_per_run = []
@@ -246,9 +247,9 @@ class App(CTk.CTk):
     
         self.recording_operation_frame.grid(row=0, column=2, sticky="nsew")
         self.recording_operation_frame_label.grid(row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
-        self.trial_button.grid(row=1, column=0, columnspan=2, sticky="n")
-        self.recording_button.grid(row=2, column=0, columnspan=1, padx=10, sticky="n", pady=(0, 0))
-        self.stop_recording_button.grid(row=2, column=1, columnspan=1, padx=10, sticky="n", pady=(0, 0))
+        self.trial_button.grid(row=1, column=0, columnspan=2, sticky="")
+        self.recording_button.grid(row=2, column=0, columnspan=1, padx=10, pady=(23, 0), sticky="n")
+        self.stop_recording_button.grid(row=2, column=1, columnspan=1, padx=10, pady=(23, 0), sticky="n")
         self.recording_progress_label.grid(row=3, column=0, columnspan=2)
         # add_border(self.recording, 3, 8)
 
@@ -345,7 +346,7 @@ class App(CTk.CTk):
                 action_type = Action.RF
                 duration = self.action_duration
         if (duration != ""):
-            action = (action_type, duration)
+            action = [action_type, duration]
             self.recording_scheme_per_run.append(action)
             self.update_run_config() #add the last action added to the representition string
         else:
@@ -379,16 +380,22 @@ class App(CTk.CTk):
             match action[0]:
                 case Action.R:
                     action_name = "Nghỉ"
+                    action[1] = self.rest_duration
                 case Action.C:
                     action_name = "Gợi ý"
+                    action[1] = self.cue_duration
                 case Action.LH:
                     action_name = "Tay trái"
+                    action[1] = self.action_duration
                 case Action.RH:
                     action_name = "Tay phải"
+                    action[1] = self.action_duration
                 case Action.LF:
                     action_name = "Chân trái"
+                    action[1] = self.action_duration
                 case Action.RF:
                     action_name = "Chân phải"
+                    action[1] = self.action_duration
             cur_action_names = action_name if (cur_action_names == "") else (cur_action_names + ", " + action_name)
         print(self.recording_scheme_per_run)
         self.run_config_label.configure(text=cur_action_names, font=("Arial", 18))
@@ -424,7 +431,7 @@ class App(CTk.CTk):
                         case 1: duration = self.rest_duration
                         case 2: duration = self.cue_duration
                         case _: duration = self.action_duration
-                    self.recording_scheme_per_run.append((Action(action_index), duration))
+                    self.recording_scheme_per_run.append([Action(action_index), duration])
                 
             self.update_setting_label()
             print(self.recording_scheme_per_run)
@@ -577,7 +584,7 @@ class App(CTk.CTk):
 
     def get_file_path(self, file_type): #TODO: get the folder directory that the user chooses
         if self.name_entry.get() != "":
-            dir_path = "data/" + self.name_entry.get()
+            dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + "/" + self.name_entry.get()
             if os.path.isdir(dir_path) == False: 
                 os.makedirs(dir_path)
                 print("Directory created")
@@ -637,7 +644,7 @@ class CueWindow:
         
         print(self.recording_scheme)
         self.voiceThread = None
-        self.soundPath = u"sounds/beep-104060.mp3"
+        self.soundPath = u"assets/sounds/beep-104060.mp3"
 
         # Initiallize timer variables
         self.seconds = 0
@@ -652,10 +659,10 @@ class CueWindow:
         self.label = CTk.CTkLabel(self.root, text = '00:00', font=("Helvetica", 48))
         
         # load cue images
-        self.images = [CTk.CTkImage(light_image=Image.open("images/arrow_left_foot.png"), size=(900, 550)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_right_foot.png"), size=(900, 550)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_left_hand.png"), size=(900, 550)), 
-                       CTk.CTkImage(light_image=Image.open("images/arrow_right_hand.png"), size=(900, 550))]
+        self.images = [CTk.CTkImage(light_image=Image.open("assets/images/arrow_left_foot.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("assets/images/arrow_right_foot.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("assets/images/arrow_left_hand.png"), size=(900, 550)), 
+                       CTk.CTkImage(light_image=Image.open("assets/images/arrow_right_hand.png"), size=(900, 550))]
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(self.root, text="", font=("Helvetica", 48))
         # Update the timer display

@@ -1,1 +1,1 @@
-{"rest_duration": 2, "cue_duration": 2, "action_duration": 3, "scheme": [1, 2, 4, 1, 2, 3, 1, 2, 6, 1, 2, 5, 1], "repeated_runs": 1}
+{"rest_duration": 5, "cue_duration": 2, "action_duration": 3, "scheme": [1, 2, 4], "repeated_runs": 3}
