@@ -622,11 +622,11 @@ class App(CTk.CTk):
                 self.cue_window = CueWindow(window, self.recording_scheme_per_run, self.repeated_runs)
                 
                 self.cue_window.root = window
-                if self.cue_window.timerFlag == False:
+                if self.cue_window.timer_flag == False:
                     self.cue_window.label.grid(row=0, sticky="n")
                     self.cue_window.image.grid(row=1, sticky="swen")
                     self.cue_window.instruction.grid(row=1, sticky="we")
-                    self.cue_window.timerFlag = True
+                    self.cue_window.timer_flag = True
                     self.cue_window.set(self.recording_scheme_per_run[0][1])
                     
             
@@ -643,15 +643,15 @@ class CueWindow:
             self.recording_scheme += recording_scheme
         
         print(self.recording_scheme)
-        self.voiceThread = None
-        self.soundPath = u"assets/sounds/beep-104060.mp3"
+        self.sound_path = ""
+        self.voice_content = "Bắt đầu"
+        self.voice_thread = None
 
         # Initiallize timer variables
         self.seconds = 0
-        self.timerFlag = False
-        self.cueFlag = False
+        self.timer_flag = False
+        self.cue_flag = False
         self.counter = 0
-        
 
         self.total_nums_of_actions = len(self.recording_scheme)
       
@@ -666,12 +666,13 @@ class CueWindow:
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(self.root, text="", font=("Helvetica", 48))
         # Update the timer display
+        self.play_sound(self.voice_content)
         self.update()
         pass
 
     def stop(self):
         self.counter = 0
-        self.timerFlag = 0 #stop timer
+        self.timer_flag = 0 #stop timer
         self.root.destroy()  
         pass
 
@@ -683,11 +684,19 @@ class CueWindow:
         return time_str
 
     def update(self):
-        if self.timerFlag:
+        if self.timer_flag:
             time_str = self.calculate()
             self.label.configure(text=time_str)
-            if self.cueFlag: #Current view is cue
+            if self.cue_flag: #Current view is cue
                 self.image.grid(row=1, sticky="we")
+                if (self.seconds == self.recording_scheme[self.counter][1]): #at the start of cue
+                    match self.recording_scheme[self.counter+1][0]:
+                        case Action.LH: self.voice_content = "Nâng tay trái"
+                        case Action.RH: self.voice_content = "Nâng tay phải"
+                        case Action.LF: self.voice_content = "Nâng chân trái"
+                        case Action.RF: self.voice_content = "Nâng chân phải"
+                    self.voice_thread = threading.Thread(target=self.play_sound,args=(self.voice_content
+                                                                              , ),  daemon=True).start()                    
                 if self.seconds != 0:
                     self.seconds -= 1
                 else:
@@ -697,7 +706,7 @@ class CueWindow:
                         self.set(self.recording_scheme[self.counter][1])
                         self.image.grid_forget()
                         print("Next action:"+ str(self.recording_scheme[self.counter][0]))
-                        self.cueFlag = False 
+                        self.cue_flag = False 
                         # self.voiceThread = threading.Thread(target=self.activeVoice, args=(self.recording_scheme[self.counter][0],)).start()
                     else: #end of scheme
                         self.stop()
@@ -706,16 +715,25 @@ class CueWindow:
                     return
             else: #Current view is rest or action
                     self.instruction.grid(row=1, sticky="we")
+                    
+                    #at the start of each action
                     if (self.recording_scheme[self.counter][0] == Action.R and self.seconds == self.recording_scheme[self.counter][1]): 
-                        self.instruction.configure(text="Nghỉ")
-                        self.voiceThread = threading.Thread(target=playsound, args=(self.soundPath,)).start()
+                        self.instruction.configure(text="Nghỉ ngơi")
+                        self.voice_content = "beep"
+                        self.voice_thread = threading.Thread(target=self.play_sound,args=(self.voice_content
+                                                                        , ),  daemon=True).start()
                         # playsound(u"sounds/beep-104060.mp3")
-                    elif (self.seconds == self.recording_scheme[self.counter][1]): 
+                    elif (self.seconds == self.recording_scheme[self.counter][1]):
                         self.instruction.configure(text="Thực hiện hành động")
+                        
                     if self.seconds != 0:
                         self.seconds -= 1
-                    else:
+                    else:# at the end of each action
                         print("Current action: " + str(self.recording_scheme[self.counter][0]))
+                        # if (self.recording_scheme[self.counter][0] != Action.R):
+                        #     self.voice_content = "Nghỉ ngơi"
+                        #     self.voice_thread = threading.Thread(target=self.play_sound,args=(self.voice_content
+                        #                                                 , ),  daemon=True).start()
                         self.counter += 1
                         self.instruction.grid_forget()
                         if self.counter != self.total_nums_of_actions:
@@ -723,8 +741,8 @@ class CueWindow:
                             self.set(self.recording_scheme[self.counter][1]) # next segment
                             print(self.recording_scheme[self.counter][0])
                             if self.recording_scheme[self.counter][0] == Action.C: #next segment is C
-                                self.getCueImage(self.recording_scheme[self.counter+1][0]) #get cue image based on next action
-                                self.cueFlag = True
+                                self.get_cue_image(self.recording_scheme[self.counter+1][0]) #get cue image based on next action
+                                self.cue_flag = True
                             # self.voiceThread = threading.Thread(target=self.activeVoice, args=(self.recording_scheme[self.counter][0],)).start()
                             # self.activeVoice(self.recording_scheme[self.counter][0])
                         else: #end of scheme
@@ -734,7 +752,7 @@ class CueWindow:
                         return
         self.root.after(1000, self.update) # Update timer after 1s
         
-    def getCueImage(self, actionType):
+    def get_cue_image(self, actionType):
         print("Getting image...")
         if actionType == Action.LF:
             self.image.configure(image=self.images[0])
@@ -752,6 +770,30 @@ class CueWindow:
         
     def set(self, amount):
         self.seconds = amount
+
+    def play_sound(self, voice_content):
+        match voice_content:
+            case "beep":
+                self.sound_path = u"assets/sounds/beep.mp3"
+            case "Bắt đầu":
+                self.sound_path = u"assets/sounds/start.mp3"
+            case "Nghỉ ngơi":
+                self.sound_path = u"assets/sounds/rest.mp3"
+            case "Nâng tay trái":
+                self.sound_path = u"assets/sounds/left_hand.mp3"
+            case "Nâng tay phải":
+                self.sound_path = u"assets/sounds/right_hand.mp3"
+            case "Nâng chân trái":
+                self.sound_path = u"assets/sounds/left_leg.mp3"
+            case "Nâng chân phải":
+                self.sound_path = u"assets/sounds/right_leg.mp3"
+        playsound(self.sound_path)
+        
+    def start_voice_thread(self):
+        if self.voice_thread is None or not self.voice_thread.is_alive():
+            self.voice_thread = threading.Thread(target=self.play_sound,args=(self.voice_content
+                                                                              , ),  daemon=True)
+            self.voice_thread.start()
 
 # Main loop
 app = App()
