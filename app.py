@@ -455,6 +455,7 @@ class App(CTk.CTk):
         # add_border(self.home, 2, 6)
 
     def get_setting(self):
+        print("Getting settings...")
         if self.current_recording_setting.get() == "Pointer":
             self.set_pointer_setting()
         elif self.current_recording_setting.get() == "Character":
@@ -463,14 +464,36 @@ class App(CTk.CTk):
             self.set_custom_setting()
 
     # TODO: define each setting according to the recording scheme video
-    def set_pointer_setting():
+    def set_pointer_setting(self):
         pass
 
-    def set_character_setting():
-        pass
+    def set_character_setting(self):
+        self.reset_entry(self.recording)
+        self.rest_duration = 2
+        self.cue_duration = 2
+        self.action_duration = 4
+        self.repeated_runs = 3
+        
+        self.recording_scheme_per_run = [
+            [Action.R, self.rest_duration],
+            [Action.C, self.cue_duration], 
+            [Action.RH, self.action_duration], 
+            [Action.R, self.rest_duration],
+            [Action.C, self.cue_duration], 
+            [Action.LH, self.action_duration], 
+            [Action.R, self.rest_duration],
+            [Action.C, self.cue_duration], 
+            [Action.RF, self.action_duration], 
+            [Action.R, self.rest_duration],
+            [Action.C, self.cue_duration], 
+            [Action.LF, self.action_duration], 
+        ]
+        
+        print(self.recording_scheme_per_run)
+        self.update_setting_label()
 
-    def set_custom_setting():
-        pass
+    def set_custom_setting(self):
+        self.get_latest_scheme_config()
 
     def add_action(self):
         action_type = None
@@ -553,7 +576,7 @@ class App(CTk.CTk):
                     action[1] = self.action_duration
             cur_action_names = action_name if (cur_action_names == "") else (
                 cur_action_names + ", " + action_name)
-        print(self.recording_scheme_per_run)
+        # print(self.recording_scheme_per_run)
         self.run_config_label.configure(
             text=cur_action_names, font=("Arial", 18))
 
@@ -576,6 +599,8 @@ class App(CTk.CTk):
             with open(f"last_config.json", "r") as file:
                 last_config = json.load(file)
                 print(last_config)
+                self.reset_entry(self.recording)
+                self.recording_scheme_per_run = []
                 self.rest_duration = last_config["rest_duration"]
                 self.cue_duration = last_config["cue_duration"]
                 self.action_duration = last_config["action_duration"]
@@ -726,6 +751,21 @@ class App(CTk.CTk):
             CTk.set_appearance_mode("dark")
 
     # ----------------------Utils----------------------#
+    def get_childrens(self, window):
+        lst = window.winfo_children()
+
+        for item in lst :
+            if item.winfo_children() :
+                lst.extend(item.winfo_children())
+        return lst
+        
+    def reset_entry(self, window):
+        widgets = self.get_childrens(window)
+        for widget in widgets:
+            if isinstance(widget, CTk.CTkEntry):
+                widget.delete(0, "end")
+        print("Entry reset for window")
+    #TODO: Add a function to lock all entry fields in the recording tab
     def show_error_message(self, error_message):
         error_window = CTk.CTkToplevel(self)
         error_window.title("Error")
