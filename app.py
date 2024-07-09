@@ -85,8 +85,9 @@ class App(CTk.CTk):
         self.home.grid_rowconfigure(0, weight=1)
 
         self.recording.grid_columnconfigure(0, weight=1)
-        self.recording.grid_columnconfigure(1, weight=1)
-        self.recording.grid_columnconfigure(2, weight=1)
+        self.recording.grid_columnconfigure(1, weight=2)
+        self.recording.grid_columnconfigure(2, weight=2)
+        self.recording.grid_columnconfigure(2, weight=2)
         self.recording.grid_rowconfigure(0, weight=1)
 
         self.training.grid_columnconfigure(0, weight=1)
@@ -107,10 +108,29 @@ class App(CTk.CTk):
         self.home_connection_frame.grid_rowconfigure(3, weight=4)
         self.home_connection_frame.grid_columnconfigure(0, weight=1)
 
-        self.home_patient_info_frame = CTk.CTkFrame(
+        self.home_info_frame = CTk.CTkFrame(
             master=self.home, fg_color="SpringGreen2")
+
+        self.home_patient_info_frame = CTk.CTkFrame(
+            master=self.home_info_frame, fg_color="SpringGreen2"
+        )
         self.home_patient_info_frame_label = CTk.CTkLabel(
-            master=self.home_patient_info_frame, text="Thông tin bệnh nhân", font=("Arial", 24))
+            master=self.home_patient_info_frame,
+            text="Thông tin bệnh nhân",
+            font=("Arial", 24))
+
+        self.home_recorder_info_frame = CTk.CTkFrame(
+            master=self.home_info_frame, fg_color="SpringGreen2"
+        )
+        self.home_recorder_info_frame_label = CTk.CTkLabel(
+            master=self.home_recorder_info_frame,
+            text="Thông tin bên thu",
+            font=("Arial", 24))
+
+        self.home_info_frame.grid_columnconfigure(0, weight=1)
+        self.home_info_frame.grid_rowconfigure(0, weight=1)
+        self.home_info_frame.grid_rowconfigure(1, weight=1)
+
         self.home_patient_info_frame.grid_columnconfigure(0, weight=1)
         self.home_patient_info_frame.grid_columnconfigure(1, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(0, weight=1)
@@ -118,7 +138,13 @@ class App(CTk.CTk):
         self.home_patient_info_frame.grid_rowconfigure(2, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(3, weight=1)
         self.home_patient_info_frame.grid_rowconfigure(4, weight=1)
-        self.home_patient_info_frame.grid_rowconfigure(5, weight=8)
+        self.home_patient_info_frame.grid_rowconfigure(5, weight=1)
+
+        self.home_recorder_info_frame.grid_columnconfigure(0, weight=1)
+        self.home_recorder_info_frame.grid_rowconfigure(0, weight=1)
+        self.home_recorder_info_frame.grid_rowconfigure(1, weight=2)
+        self.home_recorder_info_frame.grid_rowconfigure(2, weight=2)
+
         # EEG Stream connection
         self.eeg_stream = None  # LSL Stream for emotiv connection
         self.inlet = None  # InletStream
@@ -150,12 +176,21 @@ class App(CTk.CTk):
         self.age_entry = CTk.CTkEntry(self.home_patient_info_frame, placeholder_text="Nhập tuổi bệnh nhân",
                                       height=40, width=240, font=("Arial", 18))
 
+        self.location_entry = CTk.CTkEntry(self.home_patient_info_frame, placeholder_text="Nhập tỉnh thành bệnh nhân sinh sống",
+                                           height=40, width=240, font=("Arial", 18))
+
         self.gender_options = CTk.CTkOptionMenu(
             self.home_patient_info_frame, values=genders, font=("Arial", 18))
 
         self.submit_button = CTk.CTkButton(
             self.home_patient_info_frame, text="Gửi", font=("Arial", 18), command=self.submit)
 
+        # Recorder entry field
+        self.recording_facility_name = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên đơn vị thu",
+                                                    height=40, width=240, font=("Arial", 18))
+        self.recording_device_name = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên thiết bị thu",
+                                                  height=40, width=240, font=("Arial", 18))
+        # Widget layout assignment
         self.home_connection_frame.grid(
             row=0, column=0, rowspan=5, sticky="nsew")
         self.home_connection_frame_label.grid(
@@ -163,18 +198,39 @@ class App(CTk.CTk):
         self.eeg_connection_switch.grid(row=1, column=0, columnspan=1)
         self.vr_connection.grid(row=2, column=0, columnspan=1)
 
-        self.home_patient_info_frame.grid(
-            row=0, column=1, rowspan=5, sticky="nsew")
+        self.home_info_frame.grid(
+            row=0, column=1, sticky="nsew")
+        self.home_patient_info_frame.grid(row=0, column=0, sticky="nsew")
+        self.home_recorder_info_frame.grid(row=1, column=0, sticky="nsew")
+
         self.home_patient_info_frame_label.grid(
             row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
         self.patient_image_label.grid(row=1, column=0, rowspan=4, sticky="e")
         self.name_entry.grid(row=1, column=1, columnspan=1)
         self.age_entry.grid(row=2, column=1, columnspan=1)
-        self.gender_options.grid(row=3, column=1, columnspan=1)
-        self.submit_button.grid(row=4, column=1, columnspan=1)
+        self.location_entry.grid(row=3, column=1, columnspan=1)
+        self.gender_options.grid(row=4, column=1, columnspan=1)
+        self.submit_button.grid(row=5, column=1, columnspan=1)
+
+        self.home_recorder_info_frame_label.grid(
+            row=0, column=0, sticky="n", pady=(30, 0))
+        self.recording_facility_name.grid(row=1, column=0, sticky="n")
+        self.recording_device_name.grid(row=2, column=0, sticky="n")
 
         # ----------------------Recording----------------------#
         # Layout
+        self.recording_setting_frame = CTk.CTkFrame(
+            master=self.recording, fg_color="azure")
+        self.recording_setting_frame_label = CTk.CTkLabel(
+            master=self.recording_setting_frame, text="Cài đặt phiên thu", font=("Arial", 24))
+        self.current_recording_setting = CTk.StringVar(value="Custom")
+        self.recording_setting_frame.grid_columnconfigure(0, weight=1)
+        self.recording_setting_frame.grid_rowconfigure(0, weight=1)
+        self.recording_setting_frame.grid_rowconfigure(1, weight=1)
+        self.recording_setting_frame.grid_rowconfigure(2, weight=1)
+        self.recording_setting_frame.grid_rowconfigure(3, weight=1)
+        self.recording_setting_frame.grid_rowconfigure(4, weight=4)
+
         self.recording_duration_config_frame = CTk.CTkFrame(
             master=self.recording, fg_color="light blue")
         self.recording_duration_config_frame_label = CTk.CTkLabel(
@@ -214,6 +270,18 @@ class App(CTk.CTk):
 
         # Run configuration stage:
         self.recording_scheme_per_run = []
+        self.recording_setting_pointer_option = CTk.CTkRadioButton(
+            master=self.recording_setting_frame, text="Bài thu con trỏ",
+            command=self.get_setting, variable=self.current_recording_setting, value="Pointer"
+        )
+        self.recording_setting_character_option = CTk.CTkRadioButton(
+            master=self.recording_setting_frame, text="Bài thu kí tự",
+            command=self.get_setting, variable=self.current_recording_setting, value="Character"
+        )
+        self.recording_setting_custom_option = CTk.CTkRadioButton(
+            master=self.recording_setting_frame, text="Tùy chỉnh bài thu",
+            command=self.get_setting, variable=self.current_recording_setting, value="Custom"
+        )
 
         self.rest_duration_label = CTk.CTkLabel(
             self.recording_duration_config_frame, text="Thời gian nghỉ (giây):", wraplength=200, font=("Arial", 18))
@@ -265,8 +333,17 @@ class App(CTk.CTk):
         self.recording_progress_label = CTk.CTkLabel(
             self.recording_operation_frame, text="", font=("Arial", 18))
 
+        # Widget layout assignment
+        self.recording_setting_frame.grid(
+            row=0, column=0, sticky="nsew"
+        )
+        self.recording_setting_frame_label.grid(row=0, column=0)
+        self.recording_setting_pointer_option.grid(row=1, column=0)
+        self.recording_setting_character_option.grid(row=2, column=0)
+        self.recording_setting_custom_option.grid(row=3, column=0)
+
         self.recording_duration_config_frame.grid(
-            row=0, column=0, sticky="nsew")
+            row=0, column=1, sticky="nsew")
         self.recording_duration_config_frame_label.grid(
             row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
         self.rest_duration_label.grid(
@@ -279,7 +356,8 @@ class App(CTk.CTk):
             row=3, column=0, columnspan=1, sticky="nsew")
         self.action_duration_entry.grid(row=3, column=1, columnspan=1)
 
-        self.recording_scheme_config_frame.grid(row=0, column=1, sticky="nsew")
+        self.recording_scheme_config_frame.grid(
+            row=0, column=2, sticky="nsew")
         self.recording_scheme_config_frame_label.grid(
             row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
         self.action_type_label.grid(row=1, column=0, columnspan=1)
@@ -291,7 +369,7 @@ class App(CTk.CTk):
             row=4, column=0, columnspan=1, sticky="nsew")
         self.repeated_runs_entry.grid(row=4, column=1, columnspan=1)
 
-        self.recording_operation_frame.grid(row=0, column=2, sticky="nsew")
+        self.recording_operation_frame.grid(row=0, column=3, sticky="nsew")
         self.recording_operation_frame_label.grid(
             row=0, column=0, columnspan=2, sticky="n", pady=(30, 0))
         self.trial_button.grid(row=1, column=0, columnspan=2, sticky="")
@@ -330,7 +408,6 @@ class App(CTk.CTk):
             self.eeg_connection_switch.configure(
                 text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
 
-    # demo for connection  via app, need button interface and message queue
     def handle_client_connection(client_socket):
         while True:
             try:
@@ -372,11 +449,28 @@ class App(CTk.CTk):
             self.vr_connection.configure(
                 text="Kết nối kính VR | Đã ngắt kết nối", font=("Arial", 18))
 
-    # Patient information entry field
     def submit(self):  # Implement to send messages through TCP connection for character selection
         pass
 
         # add_border(self.home, 2, 6)
+
+    def get_setting(self):
+        if self.current_recording_setting.get() == "Pointer":
+            self.set_pointer_setting()
+        elif self.current_recording_setting.get() == "Character":
+            self.set_character_setting()
+        elif self.current_recording_setting.get() == "Custom":
+            self.set_custom_setting()
+
+    # TODO: define each setting according to the recording scheme video
+    def set_pointer_setting():
+        pass
+
+    def set_character_setting():
+        pass
+
+    def set_custom_setting():
+        pass
 
     def add_action(self):
         action_type = None
@@ -737,12 +831,14 @@ class CueWindow:
             self.root, text='00:00', font=("Helvetica", 48))
 
         # load cue images
-        self.images = [CTk.CTkImage(light_image=Image.open("assets/images/arrow_left_foot.png"), size=(900, 550)),
-                       CTk.CTkImage(light_image=Image.open(
-                           "assets/images/arrow_right_foot.png"), size=(900, 550)),
-                       CTk.CTkImage(light_image=Image.open(
-                           "assets/images/arrow_left_hand.png"), size=(900, 550)),
-                       CTk.CTkImage(light_image=Image.open("assets/images/arrow_right_hand.png"), size=(900, 550))]
+        self.images = [CTk.CTkImage(light_image=Image.open(
+            "assets/images/arrow_left_foot.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_right_foot.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_left_hand.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_right_hand.png"), size=(900, 550))]
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(
             self.root, text="", font=("Helvetica", 48))
