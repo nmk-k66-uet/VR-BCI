@@ -324,7 +324,7 @@ class App(CTk.CTk):
         self.calibration_flag = CTk.StringVar(value="no")
         self.calibrate_label = CTk.CTkLabel(
             self.recording_scheme_config_frame, text="Căn chỉnh:", wraplength=180, font=("Arial", 18))
-        self.calibrate_check_box = CTk.CTkCheckBox(self.recording_scheme_config_frame,
+        self.calibrate_check_box = CTk.CTkCheckBox(self.recording_scheme_config_frame, text="",
                                                    command=self.add_calibration, variable=self.calibration_flag, onvalue="yes", offvalue="no")
 
         self.add_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Thêm", font=(
@@ -391,7 +391,7 @@ class App(CTk.CTk):
         self.action_type_label.grid(row=1, column=0, columnspan=1)
         self.action_type_combo_box.grid(row=1, column=1, columnspan=1)
         self.calibrate_label.grid(row=2, column=0, columnspan=1)
-        self.calibrate_check_box.grid(row=2, column=0, columnspan=1)
+        self.calibrate_check_box.grid(row=2, column=1, columnspan=1)
         self.add_action_to_run_button.grid(row=3, column=0, columnspan=1)
         self.remove_action_to_run_button.grid(row=3, column=1, columnspan=1)
         self.run_config_label.grid(row=4, column=0, columnspan=2)
@@ -495,19 +495,20 @@ class App(CTk.CTk):
 
     # TODO: define each setting according to the recording scheme video
     def set_pointer_setting(self):
-        pass
-
-    def set_character_setting(self):
         widgets = self.get_childrens(self.recording_duration_config_frame) + \
             self.get_childrens(self.recording_scheme_config_frame)
+        self.enable_entries_and_buttons(widgets)
         self.reset_entries(widgets)
         self.rest_duration = 2
         self.cue_duration = 2
         self.action_duration = 4
         self.calibration_duration = 0
         self.repeated_runs = 3
-
+        
+        self.calibration_flag.set("no")
+        self.calibrate_check_box.deselect()
         self.calibration_scheme = []
+
 
         self.recording_scheme_per_run = [
             [Action.R, self.rest_duration],
@@ -523,7 +524,43 @@ class App(CTk.CTk):
             [Action.C, self.cue_duration],
             [Action.LF, self.action_duration],
         ]
+        
+        self.update_setting_label()
+        print(self.recording_scheme_per_run)
+        self.disable_entries_and_buttons(widgets)
 
+    def set_character_setting(self):
+        widgets = self.get_childrens(self.recording_duration_config_frame) + \
+            self.get_childrens(self.recording_scheme_config_frame)
+        self.enable_entries_and_buttons(widgets)
+        self.reset_entries(widgets)
+        self.rest_duration = 10
+        self.cue_duration = 0
+        self.action_duration = 3
+        self.calibration_duration = 5
+        self.repeated_runs = 3
+        
+        self.calibration_flag.set("yes")
+        self.calibrate_check_box.select()
+        self.calibration_scheme = [[Action.PTL, self.calibration_duration],
+                                    [Action.PTR, self.calibration_duration],
+                                    [Action.B, self.calibration_duration],
+                                    [Action.OCM, self.calibration_duration],
+                                    [Action.NH, self.calibration_duration],
+                                    [Action.SH, self.calibration_duration]]
+
+        
+        self.recording_scheme_per_run = [
+            [Action.R, self.rest_duration],
+            [Action.LH, self.action_duration],
+            [Action.RH, self.action_duration],
+            [Action.LHOC, self.action_duration],
+            [Action.RHOC, self.action_duration],
+            [Action.LF, self.action_duration],
+            [Action.RF, self.action_duration],
+            [Action.T, self.action_duration],
+        ]
+        
         print(self.recording_scheme_per_run)
         self.update_setting_label()
         self.disable_entries_and_buttons(widgets)
@@ -1051,7 +1088,7 @@ class CueWindow:
             self.voice_content, ),  daemon=True).start()
         self.set(self.recording_scheme[0][1])
         print(self.seconds)
-        self.updatev2()
+        self.update()
         pass
 
     def stop(self):
@@ -1067,7 +1104,7 @@ class CueWindow:
         print(time_str)
         return time_str
 
-    def updatev2(self):
+    def update(self):
         if self.timer_flag:
             if (self.counter >= len(self.recording_scheme)):
                 self.stop()
@@ -1105,11 +1142,11 @@ class CueWindow:
                     if self.recording_scheme[self.counter][0] == Action.R:
                         self.image.grid_forget()
                     self.set(self.recording_scheme[self.counter][1])
-                    self.root.after(0, self.updatev2)
+                    self.root.after(0, self.update)
                     return
                 else:
                     self.stop()
-        self.root.after(1000, self.updatev2)
+        self.root.after(1000, self.update)
     # TODO: get cue image for addtional actions
 
     def get_image(self, actionType):
