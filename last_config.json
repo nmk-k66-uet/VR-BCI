@@ -1,1 +1,1 @@
-{"rest_duration": 10, "cue_duration": 0, "action_duration": 3, "calibration_duration": 5, "scheme": [4, 13], "repeated_runs": 1}
+{"rest_duration": 10, "cue_duration": 0, "action_duration": 3, "calibration_duration": 5, "calibrated": "yes", "scheme": [1, 4, 3, 13, 14, 6, 5, 15], "repeated_runs": 3}
