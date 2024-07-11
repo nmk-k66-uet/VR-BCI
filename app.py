@@ -1,6 +1,6 @@
 import os
 import customtkinter as CTk
-from tkinter import filedialog
+import tkinter
 import json
 from pylsl import StreamInlet, resolve_stream
 import socket
@@ -26,9 +26,9 @@ recording_in_progress = False
 genders = ["Nam", "Nữ"]
 # Actions include: Rest, Cue, Right Hand, Left Hand, Right Feet, Left Feet,
 # Pupil to Left, Pupil to Right, Blink, Open/Close Mouth, Nod head, Shake head,
-# Left Hand Open/Close, Right Hand Open/Close, Tongue
+# Left Hand Open/Close, Right Hand Open/Close, Tongue, Add, Multiply
 Action = Enum("Action", ["R", "C", "RH", "LH", "RF",
-              "LF", "PTL", "PTR", "B", "OCM", "NH", "SH", "LHOC", "RHOC", "T"])
+              "LF", "PTL", "PTR", "B", "OCM", "NH", "SH", "LHOC", "RHOC", "T", "A", "M"])
 
 HOST, PORT = "127.0.0.1", 8000
 
@@ -191,10 +191,10 @@ class App(CTk.CTk):
             self.home_patient_info_frame, text="Gửi", font=("Arial", 18), command=self.submit)
 
         # Recorder entry field
-        self.recording_facility_name = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên đơn vị thu",
-                                                    height=40, width=240, font=("Arial", 18))
-        self.recording_device_name = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên thiết bị thu",
-                                                  height=40, width=240, font=("Arial", 18))
+        self.recording_facility_name_entry = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên đơn vị thu",
+                                                          height=40, width=240, font=("Arial", 18))
+        self.recording_device_name_entry = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên thiết bị thu",
+                                                        height=40, width=240, font=("Arial", 18))
         # Widget layout assignment
         self.home_connection_frame.grid(
             row=0, column=0, rowspan=5, sticky="nsew")
@@ -219,8 +219,8 @@ class App(CTk.CTk):
 
         self.home_recorder_info_frame_label.grid(
             row=0, column=0, sticky="n", pady=(30, 0))
-        self.recording_facility_name.grid(row=1, column=0, sticky="n")
-        self.recording_device_name.grid(row=2, column=0, sticky="n")
+        self.recording_facility_name_entry.grid(row=1, column=0, sticky="n")
+        self.recording_device_name_entry.grid(row=2, column=0, sticky="n")
 
         # ----------------------Recording----------------------#
         # Layout
@@ -320,7 +320,7 @@ class App(CTk.CTk):
         self.action_type_combo_box = CTk.CTkComboBox(self.recording_scheme_config_frame, values=[
                                                      "Nghỉ", "Gợi ý", "Tay trái", "Tay phải", "Chân trái", "Chân phải",
                                                      "Nhìn trái", "Nhìn phải", "Nháy mắt", "Đóng/Mở miệng",
-                                                     "Gật đầu", "Lắc đầu", "Nắm/Mở tay trái", "Nắm/Mở tay phải", "Lưỡi"], font=("Arial", 18), width=100)
+                                                     "Gật đầu", "Lắc đầu", "Nắm/Mở tay trái", "Nắm/Mở tay phải", "Lưỡi", "Cộng", "Nhân"], font=("Arial", 18), width=100)
 
         self.calibration_flag = CTk.StringVar(value="no")
         self.calibrate_label = CTk.CTkLabel(
@@ -333,8 +333,14 @@ class App(CTk.CTk):
         self.remove_action_to_run_button = CTk.CTkButton(self.recording_scheme_config_frame, text="Bớt", font=(
             "Arial", 18),  command=self.remove_action, height=40, width=100)
 
-        self.run_config_label = CTk.CTkLabel(
-            self.recording_scheme_config_frame, text="", wraplength=260, font=("Arial", 18))
+        self.scheme_config_text = tkinter.Text(
+            self.recording_scheme_config_frame, font=("Arial", 10), height=5, width=10)
+        
+        self.scheme_config_scrollbar = CTk.CTkScrollbar(
+            self.recording_scheme_config_frame, command=self.scheme_config_text.yview
+        )
+        self.scheme_config_text.configure(yscrollcommand=self.scheme_config_scrollbar.set)
+        
         self.repeated_runs_label = CTk.CTkLabel(
             self.recording_scheme_config_frame, text="Số lần lặp lại kịch bản:", wraplength=180, font=("Arial", 18))
         self.repeated_runs_entry = CTk.CTkEntry(
@@ -395,7 +401,8 @@ class App(CTk.CTk):
         self.calibrate_check_box.grid(row=2, column=1, columnspan=1)
         self.add_action_to_run_button.grid(row=3, column=0, columnspan=1)
         self.remove_action_to_run_button.grid(row=3, column=1, columnspan=1)
-        self.run_config_label.grid(row=4, column=0, columnspan=2)
+        self.scheme_config_text.grid(row=4, column=0, columnspan=1, sticky="nsew")
+        self.scheme_config_scrollbar.grid(row=4, column=1, sticky="ns")
         self.repeated_runs_label.grid(
             row=5, column=0, columnspan=1, sticky="nsew")
         self.repeated_runs_entry.grid(row=5, column=1, columnspan=1)
@@ -505,11 +512,10 @@ class App(CTk.CTk):
         self.action_duration = 4
         self.calibration_duration = 0
         self.repeated_runs = 3
-        
+
         self.calibration_flag.set("no")
         self.calibrate_check_box.deselect()
         self.calibration_scheme = []
-
 
         self.recording_scheme_per_run = [
             [Action.R, self.rest_duration],
@@ -525,7 +531,7 @@ class App(CTk.CTk):
             [Action.C, self.cue_duration],
             [Action.LF, self.action_duration],
         ]
-        
+
         self.update_setting_label()
         print(self.recording_scheme_per_run)
         self.disable_entries_and_buttons(widgets)
@@ -535,23 +541,23 @@ class App(CTk.CTk):
             self.get_childrens(self.recording_scheme_config_frame)
         self.enable_entries_and_buttons(widgets)
         self.reset_entries(widgets)
-        self.rest_duration = 10
+        self.rest_duration = 5
         self.cue_duration = 0
         self.action_duration = 3
         self.calibration_duration = 5
-        self.repeated_runs = 3
-        
+        self.repeated_runs = 1
+
         self.calibration_flag.set("yes")
         self.calibrate_check_box.select()
         self.calibration_scheme = [[Action.PTL, self.calibration_duration],
-                                    [Action.PTR, self.calibration_duration],
-                                    [Action.B, self.calibration_duration],
-                                    [Action.OCM, self.calibration_duration],
-                                    [Action.NH, self.calibration_duration],
-                                    [Action.SH, self.calibration_duration]]
+                                   [Action.PTR, self.calibration_duration],
+                                   [Action.B, self.calibration_duration],
+                                   [Action.OCM, self.calibration_duration],
+                                   [Action.NH, self.calibration_duration],
+                                   [Action.SH, self.calibration_duration]]
 
-        
         self.recording_scheme_per_run = [
+            [Action.R, self.rest_duration],
             [Action.R, self.rest_duration],
             [Action.LH, self.action_duration],
             [Action.RH, self.action_duration],
@@ -560,8 +566,58 @@ class App(CTk.CTk):
             [Action.LF, self.action_duration],
             [Action.RF, self.action_duration],
             [Action.T, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.LH, self.action_duration],
+            [Action.RH, self.action_duration],
+            [Action.LHOC, self.action_duration],
+            [Action.RHOC, self.action_duration],
+            [Action.LF, self.action_duration],
+            [Action.RF, self.action_duration],
+            [Action.T, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.LH, self.action_duration],
+            [Action.RH, self.action_duration],
+            [Action.LHOC, self.action_duration],
+            [Action.RHOC, self.action_duration],
+            [Action.LF, self.action_duration],
+            [Action.RF, self.action_duration],
+            [Action.T, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.A, self.action_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.R, self.rest_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
+            [Action.M, self.action_duration],
         ]
-        
+
         print(self.recording_scheme_per_run)
         self.update_setting_label()
         self.disable_entries_and_buttons(widgets)
@@ -634,7 +690,13 @@ class App(CTk.CTk):
             case "Lưỡi":
                 action_type = Action.T
                 duration = self.action_duration
-
+            case "Cộng":
+                action_type = Action.A
+                duration = self.action_duration
+            case "Nhân":
+                action_type = Action.M
+                duration = self.action_duration
+            
         if (duration != ""):
             action = [action_type, duration]
             self.recording_scheme_per_run.append(action)
@@ -661,6 +723,8 @@ class App(CTk.CTk):
         self.update_last_scheme_config()
 
     def update_setting_label(self):
+        widgets = self.get_childrens(self.recording)
+        self.reset_entries(widgets)
         if (self.rest_duration_entry.get() == ""):
             self.rest_duration_entry.insert(0, str(self.rest_duration))
         if (self.cue_duration_entry.get() == ""):
@@ -722,12 +786,18 @@ class App(CTk.CTk):
                 case Action.T:
                     action_name = "Lưỡi"
                     action[1] = self.action_duration
+                case Action.A:
+                    action_name = "Cộng"
+                    action[1] = self.action_duration
+                case Action.M:
+                    action_name = "Nhân"
+                    action[1] = self.action_duration
             cur_action_names = action_name + " (" + str(action[1]) + ")" if (cur_action_names == "") else (
                 cur_action_names + ", " + action_name + " (" + str(action[1]) + ")")
         print("Calibration:" + self.calibration_flag.get())
         print(self.recording_scheme_per_run)
-        self.run_config_label.configure(
-            text=cur_action_names, font=("Arial", 18))
+        self.scheme_config_text.insert(
+            tkinter.END, cur_action_names)
 
     def update_last_scheme_config(self):
         scheme = []
@@ -792,6 +862,7 @@ class App(CTk.CTk):
                 "cue_duration": self.cue_duration,
                 "action_duration": self.action_duration,
                 "calibration_duration": self.calibration_duration,
+                "calibrated": "no",
                 "scheme": [],
                 "repeated_runs": self.repeated_runs
             }
@@ -815,6 +886,8 @@ class App(CTk.CTk):
                 "Action.LF": self.action_duration,
                 "Action.RHOC": self.action_duration,
                 "Action.LHOC": self.action_duration,
+                "Action.A": self.action_duration,
+                "Action.M": self.action_duration,
                 "Action.T": self.action_duration,
             },
             "calibrated": self.calibration_flag.get(),
@@ -826,8 +899,8 @@ class App(CTk.CTk):
     def generate_label_file(self):  # Call when recording is finished
         with open(f"{self.get_file_path('txt')}", "w") as file:
             for i in range(0, self.repeated_runs):
-                for action in self.recording_scheme_per_run:
-                    file.write(f"{action[0].value}")
+                for action in self.calibration_scheme + self.recording_scheme_per_run:
+                    file.write(f"{action[0].value}" + '\n')
 
     def generate_data_file(self, data):
         data = np.array(data)
@@ -847,6 +920,7 @@ class App(CTk.CTk):
         if (self.calibration_flag.get() == "yes"):
             cur_action_index = 0
             sample_count = 0
+            trial_first_sample_timestamp = 0  # used for testing
             while recording_in_progress and cur_action_index < len(self.calibration_scheme):
                 sample, timestamp = self.inlet.pull_sample()
                 if timestamp != None:  # Depends on the mapping of electrodes on the EEG devices
@@ -864,6 +938,11 @@ class App(CTk.CTk):
                 if sample_count == self.calibration_scheme[cur_action_index][1] * self.sampling_frequency:
                     sample_count = 0
                     cur_action_index = cur_action_index + 1
+                    print("Timestamp of last sample for this action: " +
+                          str(timestamp))
+                    print("Duration between first and last sample: " +
+                          str(trial_first_sample_timestamp - timestamp))
+                    trial_first_sample_timestamp = 0
         # Recording scheme loop
         for i in range(0, self.repeated_runs):
             cur_action_index = 0
@@ -915,12 +994,16 @@ class App(CTk.CTk):
         if self.eeg_connection_flag.get() == 0:
             self.show_error_message("Không có kết nối với mũ thu EEG")
         else:
-            recording_in_progress = True
+            if self.name_entry.get() != "" and self.location_entry.get() != "" and self.recording_device_name_entry.get() != "":
+                recording_in_progress = True
 
-            self.init_cue_window()
-            self.start_eeg_thread()
-            self.recording_progress_label.configure(
-                text="Đang thu dữ liệu...", font=("Arial", 18))
+                self.init_cue_window()
+                self.start_eeg_thread()
+                self.recording_progress_label.configure(
+                    text="Đang thu dữ liệu...", font=("Arial", 18))
+            else:
+                self.show_error_message(
+                    "Chưa có đủ các trường dữ liệu: Tên, Địa điểm, Máy thu")
 
     def stop_recording(self):
         global recording_in_progress
@@ -953,17 +1036,19 @@ class App(CTk.CTk):
         for widget in widgets:
             if isinstance(widget, CTk.CTkEntry):
                 widget.delete(0, "end")
-        print("Entry reset for window")
+            if isinstance(widget, tkinter.Text):
+                widget.delete('1.0', tkinter.END)
+        print("Entry and text reset for window")
 
     def disable_entries_and_buttons(self, widgets):
         for widget in widgets:
-            if isinstance(widget, CTk.CTkEntry) or isinstance(widget, CTk.CTkButton) or isinstance(widget, CTk.CTkCheckBox):
+            if isinstance(widget, CTk.CTkEntry) or isinstance(widget, CTk.CTkButton) or isinstance(widget, CTk.CTkCheckBox) or isinstance(widget, tkinter.Text):
                 widget.configure(state="disabled")
         print("Entry and button disabled")
 
     def enable_entries_and_buttons(self, widgets):
         for widget in widgets:
-            if isinstance(widget, CTk.CTkEntry) or isinstance(widget, CTk.CTkButton) or isinstance(widget, CTk.CTkCheckBox):
+            if isinstance(widget, CTk.CTkEntry) or isinstance(widget, CTk.CTkButton) or isinstance(widget, CTk.CTkCheckBox) or isinstance(widget, tkinter.Text):
                 widget.configure(state="normal")
         print("Entry and button enabled")
 
@@ -971,6 +1056,7 @@ class App(CTk.CTk):
         error_window = CTk.CTkToplevel(self)
         error_window.title("Error")
         error_window.geometry("300x200")
+        error_window.attributes("-topmost", True)
 
         error_label = CTk.CTkLabel(
             error_window, text="Lỗi", font=("Arial", 18), fg_color="red")
@@ -993,17 +1079,20 @@ class App(CTk.CTk):
     # TODO: get the folder directory that the user chooses
     # TODO: add location and recording device name to folder tree
     def get_file_path(self, file_type):
-        if self.name_entry.get() != "":
-            dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + \
+        if self.name_entry.get() != "" and self.location_entry.get() != "" and self.recording_device_name_entry.get() != "":
+
+            dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + "/" + self.current_recording_setting.get() + \
                 "/" + self.name_entry.get()
             if os.path.isdir(dir_path) == False:
                 os.makedirs(dir_path)
                 print("Directory created")
             file_path = dir_path + "/" + self.name_entry.get() + "_" + \
-                datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "." + file_type
+                datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "_" + self.location_entry.get() + \
+                "_" + self.recording_device_name_entry.get() + "." + file_type
             return file_path
         else:
-            self.show_error_message("Chưa có tên đối tượng thu dữ liệu")
+            self.show_error_message(
+                "Chưa có đủ các trường dữ liệu: Tên, Địa điểm, Máy thu")
 
     def init_cue_window(self):
         self.update_run_config()
@@ -1041,10 +1130,6 @@ class App(CTk.CTk):
                 self.cue_window.instruction.grid(row=1, sticky="we")
                 self.cue_window.timer_flag = True
 
-# def add_border(root, nums_of_cols, nums_of_rows):
-#             for col in range(0, nums_of_cols):
-#                 border = CTk.CTkFrame(root, width=2, bg_color="blue")
-#                 border.grid(row=0, column=col, rowspan=nums_of_rows, sticky="ns", padx=(0, 10))
 
 class CueWindow:
     def __init__(self, root, calibration_scheme, main_recording_scheme, nums_of_runs) -> None:
@@ -1145,10 +1230,9 @@ class CueWindow:
                             self.voice_thread = threading.Thread(target=self.play_sound, args=(
                                 action, ),  daemon=True).start()
                         case _:
-                            if self.counter-1 >= 0 and self.recording_scheme[self.counter-1][0] != Action.C:
+                            if self.counter-1 >= 0 and self.recording_scheme[self.counter-1][0] != Action.C and self.recording_scheme[self.counter-1][0] != action:
                                 self.voice_thread = threading.Thread(target=self.play_sound, args=(
                                     action, ),  daemon=True).start()
-                        
 
                     # self.voice_thread = threading.Thread(target=self.play_sound, args=(
                     #     action, ),  daemon=True).start()
@@ -1194,6 +1278,11 @@ class CueWindow:
             self.image.configure(image=self.images[10])
         elif actionType == Action.T:
             self.image.configure(image=self.images[12])
+        elif actionType == Action.A:
+            pass
+        elif actionType == Action.T:
+            pass
+            
         self.image.configure(image=None)
 
     def get_instruction(self, actionType):
@@ -1225,6 +1314,10 @@ class CueWindow:
             self.instruction.configure(text="Nắm/mở tay phải")
         if actionType == Action.T:
             self.instruction.configure(text="Chuyển động lưỡi")
+        if actionType == Action.A:
+            self.instruction.configure(text="Thực hiện phép cộng")
+        if actionType == Action.M:
+            self.instruction.configure(text="Thực hiện phép nhân")
 
     def set(self, amount):
         self.seconds = amount
