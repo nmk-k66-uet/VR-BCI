@@ -1,0 +1,55 @@
+
+Training on subject 1
+Subject: 1   seed 1   time: 9.0 m   valid_acc: 0.7852   valid_loss: 0.575
+
+Training on subject 2
+Subject: 2   seed 1   time: 8.8 m   valid_acc: 0.8482   valid_loss: 0.471
+
+Training on subject 3
+Subject: 3   seed 1   time: 8.9 m   valid_acc: 0.8210   valid_loss: 0.548
+
+Training on subject 4
+Subject: 4   seed 1   time: 8.7 m   valid_acc: 0.8243   valid_loss: 0.505
+
+Training on subject 5
+Subject: 5   seed 1   time: 8.9 m   valid_acc: 0.8080   valid_loss: 0.537
+
+Training on subject 6
+Subject: 6   seed 1   time: 8.9 m   valid_acc: 0.8200   valid_loss: 0.517
+
+Training on subject 7
+Subject: 7   seed 1   time: 8.8 m   valid_acc: 0.7993   valid_loss: 0.565
+
+Training on subject 8
+Subject: 8   seed 1   time: 8.7 m   valid_acc: 0.7983   valid_loss: 0.577
+
+Training on subject 9
+Subject: 9   seed 1   time: 8.8 m   valid_acc: 0.8232   valid_loss: 0.514
+
+---------------------------------
+Validation performance (acc %):
+---------------------------------
+         sub_1   sub_2   sub_3   sub_4   sub_5   sub_6   sub_7   sub_8   sub_9     average
+         -----   -----   -----   -----   -----   -----   -----   -----   -----     -------
+Seed 1:  78.52   84.82   82.10   82.43   80.80   82.00   79.93   79.83   82.32     81.42   
+---------------------------------
+Average acc - all seeds: 81.42 %
+
+Train Time  - all seeds: 81.4 min
+---------------------------------
+
+
+---------------------------------
+Test performance (acc & k-score):
+---------------------------------
+                  sub_1   sub_2   sub_3   sub_4   sub_5   sub_6   sub_7   sub_8   sub_9     average
+                  -----   -----   -----   -----   -----   -----   -----   -----   -----     -------
+Seed 1: (acc %)   68.92   44.79   69.27   55.03   43.58   44.44   70.66   78.12   66.15     60.11   
+        (k-sco)   0.586   0.264   0.590   0.400   0.248   0.259   0.609   0.708   0.549     0.468   
+----------------------------------
+Average - all seeds (acc %): 60.11
+                    (k-sco): 0.468
+
+Inference time: 0.32 ms per trial
+----------------------------------
+

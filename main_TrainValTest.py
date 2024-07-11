@@ -308,7 +308,7 @@ def run(mode = "Train", model = "ATCNet"):
 
 #%%
 if __name__ == "__main__":
-    models = ["EEGNet", "DeepConvNet", "ShallowConvNet"]
+    models = ["DeepConvNet", "ShallowConvNet"]
     for model in models:
         run("Train", model)
         run("Test", model)

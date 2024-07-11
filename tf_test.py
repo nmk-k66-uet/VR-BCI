@@ -1,5 +1,6 @@
 import tensorflow as tf 
-tf.config.list_physical_devices('GPU')
+if tf.test.gpu_device_name():
+    print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 # import tensorrt
 
 # print(tensorrt.__version__)
