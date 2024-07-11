@@ -10,6 +10,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import time
 from PIL import Image
 import ctypes
 from playsound import playsound
@@ -1055,7 +1056,6 @@ class CueWindow:
 
         print(self.recording_scheme)
         self.sound_path = ""
-        self.voice_content = "Bắt đầu"
         self.voice_thread = None
 
         # Initiallize timer variables
@@ -1079,17 +1079,34 @@ class CueWindow:
             CTk.CTkImage(light_image=Image.open(
                 "assets/images/arrow_left_hand.png"), size=(900, 550)),
             CTk.CTkImage(light_image=Image.open(
-                "assets/images/arrow_right_hand.png"), size=(900, 550))]
+                "assets/images/arrow_right_hand.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/blink_eyes.png"), size=(1000, 400)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/look_right.png"), size=(900, 450)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/look_left.png"), size=(900, 450)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/nod_head.png"), size=(600, 400)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/open_left_hand.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/open_mouth.png"), size=(900, 400)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/open_right_hand.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/shake_head.png"), size=(500, 600)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/tongue.png"), size=(900, 550)),]
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(
             self.root, text="", font=("Helvetica", 48))
         # Update the timer display
         self.voice_thread = threading.Thread(target=self.play_sound, args=(
-            self.voice_content, ),  daemon=True).start()
+            Action.R, ),  daemon=True).start()
         self.set(self.recording_scheme[0][1])
         print(self.seconds)
         self.update()
-        pass
 
     def stop(self):
         self.counter = 0
@@ -1160,23 +1177,23 @@ class CueWindow:
         elif actionType == Action.RH:
             self.image.configure(image=self.images[3])
         elif actionType == Action.PTL:
-            pass
+            self.image.configure(image=self.images[6])
         elif actionType == Action.PTR:
-            pass
+            self.image.configure(image=self.images[5])
         elif actionType == Action.B:
-            pass
+            self.image.configure(image=self.images[4])
         elif actionType == Action.OCM:
-            pass
+            self.image.configure(image=self.images[9])
         elif actionType == Action.NH:
-            pass
+            self.image.configure(image=self.images[7])
         elif actionType == Action.SH:
-            pass
+            self.image.configure(image=self.images[11])
         elif actionType == Action.LHOC:
-            pass
+            self.image.configure(image=self.images[8])
         elif actionType == Action.RHOC:
-            pass
+            self.image.configure(image=self.images[10])
         elif actionType == Action.T:
-            pass
+            self.image.configure(image=self.images[12])
         self.image.configure(image=None)
 
     def get_instruction(self, actionType):
@@ -1232,11 +1249,11 @@ class CueWindow:
             case _: return
         playsound(self.sound_path)
 
-    def start_voice_thread(self):
-        if self.voice_thread is None or not self.voice_thread.is_alive():
-            self.voice_thread = threading.Thread(
-                target=self.play_sound, args=(self.voice_content, ),  daemon=True)
-            self.voice_thread.start()
+    # def start_voice_thread(self):
+    #     if self.voice_thread is None or not self.voice_thread.is_alive():
+    #         self.voice_thread = threading.Thread(
+    #             target=self.play_sound, args=(self.voice_content, ),  daemon=True)
+    #         self.voice_thread.start()
 
 
 # Main loop
