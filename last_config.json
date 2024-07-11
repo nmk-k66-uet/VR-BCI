@@ -1,1 +1,1 @@
-{"rest_duration": 5, "cue_duration": 0, "action_duration": 3, "calibration_duration": 5, "calibrated": "yes", "scheme": [1, 1, 4, 3, 13, 14, 6, 5, 15, 1, 1, 4, 3, 13, 14, 6, 5, 15, 1, 1, 4, 3, 13, 14, 6, 5, 15, 1, 1, 1, 16, 16, 16, 16, 16, 1, 1, 1, 17, 17, 17, 17, 17, 1, 1, 1, 16, 16, 16, 16, 16, 1, 1, 1, 17, 17, 17, 17, 17], "repeated_runs": 1}
+{"rest_duration": 2, "cue_duration": 2, "action_duration": 4, "calibration_duration": 0, "calibrated": "no", "scheme": [1, 2, 3, 1, 2, 4, 1, 2, 5, 1, 2, 6], "repeated_runs": 3}

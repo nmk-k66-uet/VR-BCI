@@ -1182,7 +1182,11 @@ class CueWindow:
             CTk.CTkImage(light_image=Image.open(
                 "assets/images/shake_head.png"), size=(500, 600)),
             CTk.CTkImage(light_image=Image.open(
-                "assets/images/tongue.png"), size=(900, 550)),]
+                "assets/images/tongue.png"), size=(900, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/calculate_add.png"), size=(850, 550)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/calculate_multiply.png"), size=(800, 550)),]
         self.image = CTk.CTkLabel(self.root, image=None, text="")
         self.instruction = CTk.CTkLabel(
             self.root, text="", font=("Helvetica", 48))
@@ -1279,9 +1283,9 @@ class CueWindow:
         elif actionType == Action.T:
             self.image.configure(image=self.images[12])
         elif actionType == Action.A:
-            pass
-        elif actionType == Action.T:
-            pass
+            self.image.configure(image=self.images[13])
+        elif actionType == Action.M:
+            self.image.configure(image=self.images[14])
             
         self.image.configure(image=None)
 
@@ -1325,29 +1329,22 @@ class CueWindow:
     # TODO:add audio file for each
     def play_sound(self, actionType):
         match actionType:
-            case Action.R:      self.sound_path = u"assets/sounds/beep.mp3"
-            case Action.LH:     self.sound_path = u"assets/sounds/left_hand.mp3"
-            case Action.RH:     self.sound_path = u"assets/sounds/right_hand.mp3"
-            case Action.LF:     self.sound_path = u"assets/sounds/left_leg.mp3"
-            case Action.RF:     self.sound_path = u"assets/sounds/right_leg.mp3"
-            case Action.PTL: return
-            case Action.PTR: return
-            case Action.B: return
-            case Action.OCM: return
-            case Action.NH: return
-            case Action.SH: return
-            case Action.LHOC: return
-            case Action.RHOC: return
-            case Action.T: return
+            case Action.R: self.sound_path = u"assets/sounds/beep.mp3"
+            case Action.LH: self.sound_path = u"assets/sounds/left_hand.mp3"
+            case Action.RH: self.sound_path = u"assets/sounds/right_hand.mp3"
+            case Action.LF: self.sound_path = u"assets/sounds/left_leg.mp3"
+            case Action.RF: self.sound_path = u"assets/sounds/right_leg.mp3"
+            case Action.PTL: self.sound_path = u"assets/sounds/look_left.mp3"
+            case Action.PTR: self.sound_path = u"assets/sounds/look_right.mp3"
+            case Action.B: self.sound_path = u"assets/sounds/blink.mp3"
+            case Action.OCM: self.sound_path = u"assets/sounds/open_mouth.mp3"
+            case Action.NH: self.sound_path = u"assets/sounds/nod_head.mp3"
+            case Action.SH: self.sound_path = u"assets/sounds/shake_head.mp3"
+            case Action.LHOC: self.sound_path = u"assets/sounds/open_left_hand.mp3"
+            case Action.RHOC: self.sound_path = u"assets/sounds/open_right_hand.mp3"
+            case Action.T: self.sound_path = u"assets/sounds/tongue.mp3"
             case _: return
         playsound(self.sound_path)
-
-    # def start_voice_thread(self):
-    #     if self.voice_thread is None or not self.voice_thread.is_alive():
-    #         self.voice_thread = threading.Thread(
-    #             target=self.play_sound, args=(self.voice_content, ),  daemon=True)
-    #         self.voice_thread.start()
-
 
 # Main loop
 app = App()
