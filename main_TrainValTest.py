@@ -27,7 +27,6 @@ def train(dataset_conf, train_conf, results_path):
         # Remove the folder and its contents
         shutil.rmtree(results_path)
         os.makedirs(results_path)        
-
     # Get the current 'IN' time to calculate the overall training time
     in_exp = time.time()
     # Create a file to store the path of the best model among several runs
@@ -253,7 +252,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
     
     
 #%%
-def run(mode = "Train", model):
+def run(mode = "Train", model = "ATCNet"):
     # Define dataset parameters
     dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
     # print(os.getcwd())
@@ -289,14 +288,14 @@ def run(mode = "Train", model):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': True}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 64, 'epochs': 500, 'patience': 100, 'lr': 0.001,'n_train': 1,
+    train_conf = { 'batch_size': 128, 'epochs': 1000, 'patience': 100, 'lr': 0.001,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':model}
 
     # Create a folder to store the results of the experiment
     results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model')) + "_paper"
     if not os.path.exists(results_path):
       os.makedirs(results_path)   # Create a new directory if it does not exist 
-
+    print("#### .... #### Running on " + model + " #### .... ####")
     if mode == "Train":
         # Train the model
         train(dataset_conf, train_conf, results_path)
@@ -309,7 +308,7 @@ def run(mode = "Train", model):
 
 #%%
 if __name__ == "__main__":
-    models = ["ATCNet"; "TCNet_Fusion"; "EEGTCNet"; "MBEEG_SENet"; "EEGNeX_8_32"; "EEGNet"; "DeepConvNet"; "ShallowConvNet"]
+    models = ["EEGNet", "DeepConvNet", "ShallowConvNet"]
     for model in models:
         run("Train", model)
         run("Test", model)
