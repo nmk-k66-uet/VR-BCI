@@ -1225,7 +1225,7 @@ class CueWindow:
             self.root, text="", font=("Helvetica", 48))
         # Update the timer display
         self.voice_thread = threading.Thread(target=self.play_sound, args=(
-            Action.R, ),  daemon=True).start()
+            self.recording_scheme[0][0], ),  daemon=True).start()
         self.set(self.recording_scheme[0][1])
         print(self.seconds)
         self.update()
