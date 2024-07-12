@@ -31,6 +31,9 @@ Action = Enum("Action", ["R", "C", "RH", "LH", "RF",
               "LF", "PTL", "PTR", "B", "OCM", "NH", "SH", "LHOC", "RHOC", "T", "A", "M"])
 
 HOST, PORT = "127.0.0.1", 8000
+first_sample_timestamp = 0
+last_sample_timestamp = 0 
+latest_run_duration = 0
 
 # Add elements to Settings Tab
 
@@ -926,7 +929,8 @@ class App(CTk.CTk):
                 if timestamp != None:  # Depends on the mapping of electrodes on the EEG devices
                     data.append(sample[3:(len(sample)-2)])
                     sample_count += 1
-
+                    if first_sample_timestamp == 0:
+                        first_sample_timestamp = timestamp
                     # used for testing sync between UI and sample pull
                     if trial_first_sample_timestamp == 0:
                         trial_first_sample_timestamp = timestamp
@@ -955,6 +959,8 @@ class App(CTk.CTk):
                     data.append(sample[3:(len(sample)-2)])
                     sample_count += 1
 
+                    if first_sample_timestamp == 0:
+                        first_sample_timestamp = timestamp
                     # used for testing sync between UI and sample pull
                     if trial_first_sample_timestamp == 0:
                         trial_first_sample_timestamp = timestamp
@@ -966,6 +972,8 @@ class App(CTk.CTk):
                 if sample_count == self.recording_scheme_per_run[cur_action_index][1] * self.sampling_frequency:
                     sample_count = 0
                     cur_action_index = cur_action_index + 1
+                    if cur_action_index == len(self.recording_scheme_per_run):
+                        last_sample_timestamp = timestamp
                     print(cur_action_index)
 
                     print("Timestamp of last sample for this action: " +
@@ -974,6 +982,8 @@ class App(CTk.CTk):
                           str(trial_first_sample_timestamp - timestamp))
                     trial_first_sample_timestamp = 0
 
+        latest_run_duration = last_sample_timestamp - first_sample_timestamp
+        print("Run duration: " + str(latest_run_duration) )
         self.generate_label_file()
         self.generate_data_file(data)
         self.generate_setting_file()
@@ -1052,6 +1062,17 @@ class App(CTk.CTk):
                 widget.configure(state="normal")
         print("Entry and button enabled")
 
+    def get_run_duration(self):
+        run_duration = 0
+        for action in self.calibration_scheme + self.recording_scheme_per_run:
+            run_duration += action[1]
+        return run_duration
+    
+    def containsArtifact(self):
+        if (abs(self.get_run_duration - latest_run_duration) >= 1.5):
+            return "Artifact_"
+        return ""
+
     def show_error_message(self, error_message):
         error_window = CTk.CTkToplevel(self)
         error_window.title("Error")
@@ -1086,7 +1107,7 @@ class App(CTk.CTk):
             if os.path.isdir(dir_path) == False:
                 os.makedirs(dir_path)
                 print("Directory created")
-            file_path = dir_path + "/" + self.name_entry.get() + "_" + \
+            file_path = dir_path + "/" + self.name_entry.get() + "_" + self.containsArtifact() + \
                 datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "_" + self.location_entry.get() + \
                 "_" + self.recording_device_name_entry.get() + "." + file_type
             return file_path
