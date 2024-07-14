@@ -9,15 +9,9 @@ action_list = ['Action.R', 'Action.C', 'Action.RH', 'Action.LH',
                'Action.B', 'Action.OCM', 'Action.NH', 'Action.SH', 
                'Action.RHOC', 'Action.LHOC', 'Action.T', 'Action.A', 
                'Action.M']
-calibrated = False
-no_runs = 1
 
 subject_name = "Vu Thanh Long"
 session_scenario = "Pointer"
-global setup
-setup = None
-global labels
-labels = None
 
 if subject_name == "" and session_scenario == "":
     subject_name = input("Enter subject name: ")
@@ -30,9 +24,7 @@ def read_raw_data(dir):
     return arr
 
 def load_VKIST_data(data_path, all_trials = True):
-    global setup
-    global labels
-    X_train, y_train = None, None
+    setup, X_train, y_train = None, None, None
 
     for folder in os.listdir(data_source):
         date = os.path.join(data_source, folder)
@@ -40,25 +32,37 @@ def load_VKIST_data(data_path, all_trials = True):
             session = os.path.join(date, scenario)
             subject = os.path.join(session, subject_name)
             for file in os.listdir(subject):
-                if file.endswith(".csv") and "Artifact" not in file:
-                    arr = read_raw_data(os.path.join(subject, file))
-                    if X_train is not None:
-                        X_train += arr
+                if file.endswith(".csv"):
+                    if "Artifact" in file and all_trials == False:
+                        pass
                     else:
-                        X_train = arr
+                        data = read_raw_data(os.path.join(subject, file))
+                        if X_train is not None:
+                            X_train += data
+                        else:
+                            X_train = data
                 elif file.endswith(".json") and setup == None:
                     setup = json.load(open(os.path.join(subject, file)))
                 elif file.endswith(".txt"):
-                    if labels == None:
-                        labels = open(os.path.join(subject, file)).read().splitlines()
+                    labels = list(map(int, open(os.path.join(subject, file)).read().splitlines()))
+                    if y_train is not None:
+                        y_train += labels
+                    else:
+                        y_train = labels
     
     calibrated = setup.get('calibrated')
     no_runs = setup.get('num_of_runs')
+
+    return setup, calibrated, no_runs, X_train, labels
     
 
-load_VKIST_data(data_source)
+setup, calibrated, no_runs, X_train, y_train = load_VKIST_data(data_source)
+print(setup)
+print(calibrated)
+print(no_runs)
+print(X_train.shape)
+print(y_train)
 
-print(setup.get('duration').get('Action.R'))
 # print(subject_name)
 
 
