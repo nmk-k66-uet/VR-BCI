@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import json
+from tensorflow.keras.utils import to_categorical
 
 data_source = "data"
 action_list = ['Action.R', 'Action.C', 'Action.RH', 'Action.LH', 
@@ -23,31 +24,44 @@ def read_raw_data(dir):
     arr = np.delete(arr, 0, axis=0).transpose()
     return arr
 
-def process_VKIST_data(setup, X_train, y_train):
-    X_return = []
+def process_VKIST_data(setup, X, y):
+    data, X_return, y_return = [], [], None
     cur_sample, f = 0, 128
     for i in range(0, 22):
-        X_return.append([])
-    for label in y_train[:]:
+        data.append([])
+    for label in y[:]:
         dur = setup.get('duration').get(action_list[label - 1])
         match label:
             case 1:
                 cur_sample += (dur * f)
-                y_train.remove(label)
+                y.remove(label)
             case 2:
                 cur_sample += int((dur - 0.5) * f)
-                y_train.remove(label)
+                y.remove(label)
             case default:
                 begin = cur_sample
                 end = cur_sample + int((dur + 0.5) * f)
-                for i in range(0, len(X_train)):
-                    X_return[i] = [*X_return[i], *X_train[i][begin : end]]
+                for i in range(0, len(X)):
+                    data[i] = [*data[i], *X[i][begin : end]]
                     cur_sample = end
+
+    data = np.array(data)
+    slice_size = int(4.5 * 128)
+    for i in range(0, data.shape[1], slice_size):
+        if i + slice_size <= data.shape[1]:
+            slice_2d = data[:, i : (i + slice_size)]
+            X_return.append(slice_2d)
+    
     X_return = np.array(X_return)
-    return X_return, y_train
+    y_return = np.array(y)
+    X_train, X_test = np.split(X_return, [int(0.8 * X_return.shape[0])], axis=0)
+    y_train, y_test = np.split(np.array(y_return) - np.min(y_return), [int(0.8 * y_return.shape[0])], axis=0)
+    # y_train_onehot = to_categorical(y_train)
+
+    return X_train, y_train, X_test, y_test
 
 def load_VKIST_data(data_path, all_trials = True):
-    setup, calibrated, no_runs, X_train, y_train = None, None, None, None, None
+    setup, calibrated, no_runs, X_train, y_train, X_test, y_test = None, None, None, None, None, None, None
 
     for folder in os.listdir(data_source):
         date = os.path.join(data_source, folder)
@@ -78,19 +92,27 @@ def load_VKIST_data(data_path, all_trials = True):
                         y_train = y_train + labels
                     else:
                         y_train = labels
-    
-    X_train, y_train = process_VKIST_data(setup, X_train, y_train)
 
-    return setup, calibrated, no_runs, X_train, y_train
+    temp = []
+    electrodes_map = [0, 1, 2, 11, 12, 13, 3, 4, 5, 6, 14, 15, 16, 7, 8, 19, 18, 17, 9, 10, 20, 21]
+    for i in electrodes_map:
+        temp.append(X_train[i])
+    X_train = temp
+    
+    X_train, y_train, X_test, y_test = process_VKIST_data(setup, X_train, y_train)
+
+    return setup, calibrated, no_runs, X_train, y_train, X_test, y_test
     
 
-setup, calibrated, no_runs, X_train, y_train = load_VKIST_data(data_source)
-print(setup)
-print(calibrated)
-print(no_runs)
+setup, calibrated, no_runs, X_train, y_train, X_test, y_test = load_VKIST_data(data_source)
+# print(setup)
+# print(calibrated)
+# print(no_runs)
 print(X_train.shape)
-print(len(y_train))
+print(y_train.shape)
 # print(y_train)
+print(X_test.shape)
+print(y_test.shape)
 
 # print(subject_name)
 

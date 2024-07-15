@@ -145,6 +145,8 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
     # print("Data per trial")
     # print(X_train[0])
     # print(len(y_train))
+    print(y_train)
+    print(y_train.shape)
     y_train_onehot = to_categorical(y_train)
     # Prepare testing data 
     N_tr, N_ch, T = X_test.shape 
@@ -157,15 +159,15 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
 
     return X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot
 
-# X_train, y_train, X_test, y_test = load_data_LOSO('datasets/BCI2a/raw/', 0, 'BCI2a')
+# X_train, y_train, X_test, y_test = load_data_LOSO('data/BCI2a/raw/', 0, 'BCI2a')
 # print(len(X_train))
 # print(len(y_train))
 # print(X_test.shape)
 # print(y_test.shape)
 
-# X_train, _, y_train_onehot, x_test, _, _ = get_data('datasets/BCI2a/raw/', 0, 'BCI2a', LOSO = True, isStandard = True)
-# print(X_train.shape)
-# print(y_train_onehot.shape)
+X_train, _, y_train_onehot, x_test, _, _ = get_data('data/BCI2a/raw/', 0, 'BCI2a', LOSO = True, isStandard = True)
+print(X_train.shape)
+print(y_train_onehot)
 # print(x_test.shape)
 
-# data_return, class_return = load_BCI2a_data('datasets/BCI2a/raw/s1/', 1, True, True)
+# data_return, class_return = load_BCI2a_data('data/BCI2a/raw/s1/', 1, True, True)

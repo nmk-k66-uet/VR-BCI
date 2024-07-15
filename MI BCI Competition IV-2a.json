@@ -1,26 +1,26 @@
 {
     "CMS": "TP9",
     "DRL": "TP10",
-    "LA": "Fz",
-    "LB": "FC3",
-    "LC": "FC1",
-    "LD": "C5",
-    "LE": "C3",
-    "LF": "C1",
-    "LG": "Cz",
-    "LH": "CP3",
-    "LJ": "CP1",
-    "LK": "P1",
-    "LL": "Pz",
-    "RA": "FCz",
-    "RB": "FC2",
-    "RC": "FC4",
-    "RD": "C2",
-    "RE": "C4",
-    "RF": "C6",
-    "RG": "CP4",
-    "RH": "CP2",
-    "RJ": "CPz",
-    "RK": "P2",
-    "RL": "POz"
+    "LA": "Fz", 0
+    "LB": "FC3", 1
+    "LC": "FC1", 2
+    "LD": "C5", 3
+    "LE": "C3", 4
+    "LF": "C1", 5
+    "LG": "Cz", 6
+    "LH": "CP3", 7
+    "LJ": "CP1", 8
+    "LK": "P1", 9
+    "LL": "Pz", 10
+    "RA": "FCz", 11
+    "RB": "FC2", 12
+    "RC": "FC4", 13
+    "RD": "C2", 14
+    "RE": "C4", 15
+    "RF": "C6", 16
+    "RG": "CP4", 17
+    "RH": "CP2", 18
+    "RJ": "CPz", 19
+    "RK": "P2", 20
+    "RL": "POz" 21
 }
