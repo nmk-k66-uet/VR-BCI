@@ -96,6 +96,7 @@ class App(CTk.CTk):
         self.recording.grid_rowconfigure(0, weight=1)
 
         self.training.grid_columnconfigure(0, weight=1)
+        self.training.grid_columnconfigure(1, weight=15)
         self.training.grid_rowconfigure(0, weight=1)
 
         self.settings.grid_columnconfigure(0, weight=1)
@@ -281,15 +282,15 @@ class App(CTk.CTk):
         self.latest_run_duration = 0
         self.recording_setting_pointer_option = CTk.CTkRadioButton(
             master=self.recording_setting_frame, text="Bài thu con trỏ", font=("Arial", 18),
-            command=self.get_setting, variable=self.current_recording_setting, value="Pointer"
+            command=self.get_training_setting, variable=self.current_recording_setting, value="Pointer"
         )
         self.recording_setting_character_option = CTk.CTkRadioButton(
             master=self.recording_setting_frame, text="Bài thu kí tự", font=("Arial", 18),
-            command=self.get_setting, variable=self.current_recording_setting, value="Character"
+            command=self.get_training_setting, variable=self.current_recording_setting, value="Character"
         )
         self.recording_setting_custom_option = CTk.CTkRadioButton(
             master=self.recording_setting_frame, text="Tùy chỉnh bài thu", font=("Arial", 18),
-            command=self.get_setting, variable=self.current_recording_setting, value="Custom"
+            command=self.get_training_setting, variable=self.current_recording_setting, value="Custom"
         )
 
         self.rest_duration_label = CTk.CTkLabel(
@@ -336,12 +337,13 @@ class App(CTk.CTk):
 
         self.scheme_config_text = tkinter.Text(
             self.recording_scheme_config_frame, font=("Arial", 10), height=5, width=10)
-        
+
         self.scheme_config_scrollbar = CTk.CTkScrollbar(
             self.recording_scheme_config_frame, command=self.scheme_config_text.yview
         )
-        self.scheme_config_text.configure(yscrollcommand=self.scheme_config_scrollbar.set)
-        
+        self.scheme_config_text.configure(
+            yscrollcommand=self.scheme_config_scrollbar.set)
+
         self.repeated_runs_label = CTk.CTkLabel(
             self.recording_scheme_config_frame, text="Số lần lặp lại kịch bản:", wraplength=180, font=("Arial", 18))
         self.repeated_runs_entry = CTk.CTkEntry(
@@ -402,7 +404,8 @@ class App(CTk.CTk):
         self.calibrate_check_box.grid(row=2, column=1, columnspan=1)
         self.add_action_to_run_button.grid(row=3, column=0, columnspan=1)
         self.remove_action_to_run_button.grid(row=3, column=1, columnspan=1)
-        self.scheme_config_text.grid(row=4, column=0, columnspan=1, sticky="nsew")
+        self.scheme_config_text.grid(
+            row=4, column=0, columnspan=1, sticky="nsew")
         self.scheme_config_scrollbar.grid(row=4, column=1, sticky="ns")
         self.repeated_runs_label.grid(
             row=5, column=0, columnspan=1, sticky="nsew")
@@ -422,6 +425,57 @@ class App(CTk.CTk):
         # ---------------------Cue Window---------------------#
         self.cue_window = None
 
+        # ---------------------Training---------------------#
+        # Layout
+        self.training_setting_frame = CTk.CTkFrame(
+            master=self.training, fg_color="lavender")
+        self.current_exercise = CTk.StringVar(value="")
+        self.training_setting_frame.grid_rowconfigure(0, weight=1)
+        self.training_setting_frame.grid_rowconfigure(1, weight=1)
+        self.training_setting_frame.grid_rowconfigure(2, weight=1)
+        self.training_setting_frame.grid_rowconfigure(3, weight=1)
+        self.training_setting_frame.grid_columnconfigure(0, weight=4)
+        self.training_setting_frame.grid_columnconfigure(1, weight=1)
+
+        # Training setting widget
+        self.training_setting_frame_label = CTk.CTkLabel(
+            master=self.training_setting_frame,  text="Lựa chọn bài tập", font=("Arial", 24))
+        self.hands_exercise_image = CTk.CTkImage(light_image=Image.open(
+            "assets/images/hands_exercise.png"), size=(200, 200))
+        self.hands_exercise_image_label = CTk.CTkLabel(
+            self.training_setting_frame, image=self.hands_exercise_image, text="")
+        self.hands_exercise_option = CTk.CTkRadioButton(
+            master=self.training_setting_frame, command=self.get_exercise,
+            variable=self.current_exercise, value="Hands", text=""
+        )
+        self.left_hand_right_foot_exercise_image = CTk.CTkImage(light_image=Image.open(
+            "assets/images/left_hand_right_foot_exercise.png"), size=(200, 200))
+        self.left_hand_right_foot_exercise_image_label = CTk.CTkLabel(
+            self.training_setting_frame, image=self.left_hand_right_foot_exercise_image, text="")
+        self.left_hand_right_foot_exercise_option = CTk.CTkRadioButton(
+            master=self.training_setting_frame, command=self.get_exercise,
+            variable=self.current_exercise, value="Left Hand Right Foot", text=""
+        )
+       
+        self.right_hand_left_foot_exercise_image = CTk.CTkImage(light_image=Image.open(
+            "assets/images/right_hand_left_foot_exercise.png"), size=(200, 200))
+        self.right_hand_left_foot_exercise_image_label = CTk.CTkLabel(
+            self.training_setting_frame, image=self.right_hand_left_foot_exercise_image, text="")
+        self.right_hand_left_foot_exercise_option = CTk.CTkRadioButton(
+            master=self.training_setting_frame, command=self.get_exercise,
+            variable=self.current_exercise, value="Right Hand Left Foot", text=""
+        )
+
+        # Widget layout assignment
+        self.training_setting_frame.grid(row=0, column=0, sticky="nsew")
+        self.training_setting_frame_label.grid(row=0, column=0, columnspan=2)
+        self.hands_exercise_image_label.grid(row=1, column=0, sticky="we")
+        self.hands_exercise_option.grid(row=1, column=1)
+        self.left_hand_right_foot_exercise_image_label.grid(row=2, column=0, sticky="we")
+        self.left_hand_right_foot_exercise_option.grid(row=2, column=1)
+        self.right_hand_left_foot_exercise_image_label.grid(row=3, column=0, sticky="we")
+        self.right_hand_left_foot_exercise_option.grid(row=3, column=1)
+
         # ---------------------Settings---------------------#
         self.display_mode_flag = CTk.IntVar(value=0)
         self.display_mode_switch = CTk.CTkSwitch(self.settings, text="Chế độ tối", font=("Arial", 18),
@@ -431,6 +485,8 @@ class App(CTk.CTk):
         self.display_mode_switch.grid(row=0, column=0, sticky="n")
 
         self.get_latest_scheme_config()
+
+    # ------------------------Home------------------------#
 
     def toggle_eeg_connection(self):
         if self.eeg_connection_flag.get() == 0:
@@ -488,12 +544,13 @@ class App(CTk.CTk):
             self.vr_connection.configure(
                 text="Kết nối kính VR | Đã ngắt kết nối", font=("Arial", 18))
 
-    def submit(self):  # Implement to send messages through TCP connection for character selection
+    def submit(self):  # TODO: Implement to send messages through TCP connection for character selection
         pass
 
         # add_border(self.home, 2, 6)
 
-    def get_setting(self):
+    # ----------------------Training----------------------#
+    def get_training_setting(self):
         print("Getting settings...")
         if self.current_recording_setting.get() == "Pointer":
             self.set_pointer_setting()
@@ -502,7 +559,6 @@ class App(CTk.CTk):
         elif self.current_recording_setting.get() == "Custom":
             self.set_custom_setting()
 
-    # TODO: define each setting according to the recording scheme video
     def set_pointer_setting(self):
         widgets = self.get_childrens(self.recording_duration_config_frame) + \
             self.get_childrens(self.recording_scheme_config_frame)
@@ -697,7 +753,7 @@ class App(CTk.CTk):
             case "Nhân":
                 action_type = Action.M
                 duration = self.action_duration
-            
+
         if (duration != ""):
             action = [action_type, duration]
             self.recording_scheme_per_run.append(action)
@@ -900,7 +956,7 @@ class App(CTk.CTk):
     def generate_label_file(self):  # Call when recording is finished
         with open(f"{self.get_file_path('txt')}", "w") as file:
             for action in self.calibration_scheme:
-                    file.write(f"{action[0].value}" + '\n')
+                file.write(f"{action[0].value}" + '\n')
             for i in range(0, self.repeated_runs):
                 for action in self.recording_scheme_per_run:
                     file.write(f"{action[0].value}" + '\n')
@@ -918,8 +974,8 @@ class App(CTk.CTk):
         self.inlet.open_stream()
         data = []
         first_sample_timestamp = 0
-        last_sample_timestamp = 0 
-       
+        last_sample_timestamp = 0
+
         global recording_in_progress
         # self.inlet.open_stream()
         # Calibration scheme loop
@@ -989,7 +1045,7 @@ class App(CTk.CTk):
                     trial_first_sample_timestamp = 0
 
         self.latest_run_duration = last_sample_timestamp - first_sample_timestamp
-        print("Run duration: " + str(self.latest_run_duration) )
+        print("Run duration: " + str(self.latest_run_duration))
         self.generate_label_file()
         self.generate_data_file(data)
         self.generate_setting_file()
@@ -1032,6 +1088,25 @@ class App(CTk.CTk):
         del (self.eeg_thread)
         self.eeg_thread = None
 
+    # ----------------------Training----------------------#
+    def get_exercise(self):
+        print("Getting exercise...")
+        if self.current_exercise.get() == "Hands":
+            self.set_hands_exercise()
+        elif self.current_exercise.get() == "Left Hand Right Foot":
+            self.set_left_hand_right_foot_exercise()
+        elif self.current_exercise.get() == "Right Hand Left Foot":
+            self.set_right_hand_left_foot_exercise() 
+        #TODO: Send command to VR interface to change the exercise type
+
+    def set_hands_exercise(self):
+        pass
+
+    def set_left_hand_right_foot_exercise(self):
+        pass
+
+    def set_right_hand_left_foot_exercise(self):
+        pass
     # ----------------------Settings----------------------#
     # Light and Dark Mode switch
 
@@ -1077,7 +1152,7 @@ class App(CTk.CTk):
         for action in self.recording_scheme_per_run:
             run_duration += action[1] * self.repeated_runs
         return run_duration
-    
+
     def containsArtifact(self):
         dif = abs(self.get_run_duration() - self.latest_run_duration)
         print("Dif between real recording time and scheme time: " + str(dif))
@@ -1319,7 +1394,7 @@ class CueWindow:
             self.image.configure(image=self.images[13])
         elif actionType == Action.M:
             self.image.configure(image=self.images[14])
-            
+
         self.image.configure(image=None)
 
     def get_instruction(self, actionType):
@@ -1378,6 +1453,7 @@ class CueWindow:
             case Action.T: self.sound_path = u"assets/sounds/tongue.mp3"
             case _: return
         playsound(self.sound_path)
+
 
 # Main loop
 app = App()
