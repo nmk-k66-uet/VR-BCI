@@ -30,7 +30,7 @@ genders = ["Nam", "Nữ"]
 Action = Enum("Action", ["R", "C", "RH", "LH", "RF",
               "LF", "PTL", "PTR", "B", "OCM", "NH", "SH", "LHOC", "RHOC", "T", "A", "M"])
 
-HOST, PORT = "127.0.0.1", 8000
+HOST, PORT = "192.168.137.1", 8000
 
 # Add elements to Settings Tab
 
@@ -503,13 +503,26 @@ class App(CTk.CTk):
             self.eeg_connection_switch.configure(
                 text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
 
-    def handle_client_connection(client_socket):
+    def handle_client_connection(self, client_socket):
+        message = ""
+        last_message = ""
         while True:
             try:
-                client_socket.send(bytes(input(), 'utf-8'))
+                if self.current_exercise.get() == "Hands":
+                    message = "0" 
+                if self.current_exercise.get() == "Left Hand Right Foot":
+                    message = "1"
+                if self.current_exercise.get() == "Right Hand Left Foot":
+                    message = "2"
+                if (message != "" and message != last_message):
+                    client_socket.send(bytes(message,'utf-8'))
+                    print("Sending" + message)
+                    last_message = message
+                time.sleep(2)
             except ConnectionResetError:
+                print(ConnectionResetError)
                 break
-        client_socket.close()
+        client_socket[0].close()
 
     def start_server(self):
         global server_running
@@ -517,6 +530,7 @@ class App(CTk.CTk):
         server_socket.bind((HOST, PORT))
         server_socket.listen()
         print(f"Server started and listening on port {PORT}")
+        print(server_running)
         while server_running:
             client_socket, addr = server_socket.accept()
             print(f"Connected from {addr}")
@@ -1098,7 +1112,7 @@ class App(CTk.CTk):
         elif self.current_exercise.get() == "Right Hand Left Foot":
             self.set_right_hand_left_foot_exercise() 
         #TODO: Send command to VR interface to change the exercise type
-
+    
     def set_hands_exercise(self):
         pass
 
