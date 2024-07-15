@@ -9,6 +9,7 @@ import pandas as pd
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
+from scipy.signal import resample
 
 #%%
 def load_data_LOSO (data_path, subject, dataset): 
@@ -135,6 +136,11 @@ action_list = ['Action.R', 'Action.C', 'Action.RH', 'Action.LH',
 subject_name = "Vu Thanh Long"
 session_scenario = "Pointer"
 
+def up_sample(input_arr, old_rate=128, new_rate=250):
+    new_length = int(len(input_arr) * new_rate / old_rate)
+    resampled_arr = resample(input_arr, new_length)
+    return resampled_arr
+
 def read_raw_data(dir):
     df = pd.read_csv(dir, header=None)
     arr = df.to_numpy()
@@ -143,7 +149,7 @@ def read_raw_data(dir):
 
 def process_VKIST_data(setup, X, y):
     data, X_return, y_return = [], [], None
-    cur_sample, f = 0, 128
+    cur_sample, f = 0, 250
     for i in range(0, 22):
         data.append([])
     for label in y[:]:
@@ -163,7 +169,7 @@ def process_VKIST_data(setup, X, y):
                     cur_sample = end
 
     data = np.array(data)
-    slice_size = int(4.5 * 128)
+    slice_size = int(4.5 * f)
     for i in range(0, data.shape[1], slice_size):
         if i + slice_size <= data.shape[1]:
             slice_2d = data[:, i : (i + slice_size)]
@@ -213,7 +219,7 @@ def load_VKIST_data(data_path, all_trials = True):
     temp = []
     electrodes_map = [0, 1, 2, 11, 12, 13, 3, 4, 5, 6, 14, 15, 16, 7, 8, 19, 18, 17, 9, 10, 20, 21]
     for i in electrodes_map:
-        temp.append(X_train[i])
+        temp.append(up_sample(X_train[i]))
     X_train = temp
     
     X_train, y_train, X_test, y_test = process_VKIST_data(setup, X_train, y_train)
@@ -274,10 +280,10 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
 
     return X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot
 
-# X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST', isStandard=False, isShuffle=False)
-# print(X_train.shape)
-# print(y_train.shape)
-# print(y_train_onehot.shape)
-# print(X_test.shape)
-# print(y_test.shape)
-# print(y_test_onehot.shape)
+X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST', isStandard=False, isShuffle=False)
+print(X_train.shape)
+print(y_train.shape)
+print(y_train_onehot.shape)
+print(X_test.shape)
+print(y_test.shape)
+print(y_test_onehot.shape)

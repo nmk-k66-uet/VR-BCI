@@ -262,7 +262,7 @@ def run(mode = "Train", model = "ATCNet"):
         n_sub = 9
         n_classes = 4
         classes_labels = ['Left hand', 'Right hand','Foot','Tongue']
-        data_path = './datasets/BCI2a/raw/'
+        data_path = './data/BCI2a/raw/'
     elif dataset == 'HGD': 
         in_samples = 1125
         n_channels = 44
@@ -280,13 +280,20 @@ def run(mode = "Train", model = "ATCNet"):
         classes_labels = ['Fingers', 'Wrist','Elbow']     
         # classes_labels = ['Fingers', 'Elbow']     
         data_path = os.path.expanduser('~') + '/CS2R MI EEG dataset/all/EDF - Cleaned - phase one (remove extra runs)/two sessions/'
+    elif dataset == 'VKIST':
+        in_samples = 1125
+        n_channels = 22
+        n_sub = 1
+        n_classes = 4
+        classes_labels = ['Right hand', 'Left hand', 'Right feet', 'Left feet']
+        data_path = './data/VKIST'
     else:
         raise Exception("'{}' dataset is not supported yet!".format(dataset))
            
     # Set dataset paramters 
     dataset_conf = { 'name': dataset, 'n_classes': n_classes, 'cl_labels': classes_labels,
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
-                    'data_path': data_path, 'isStandard': True, 'LOSO': True}
+                    'data_path': data_path, 'isStandard': True, 'LOSO': False}
     # Set training hyperparamters
     train_conf = { 'batch_size': 128, 'epochs': 1000, 'patience': 100, 'lr': 0.001,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':model}

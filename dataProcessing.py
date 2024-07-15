@@ -46,7 +46,7 @@ def process_VKIST_data(setup, X, y):
                     cur_sample = end
 
     data = np.array(data)
-    slice_size = int(4.5 * 128)
+    slice_size = int(4.5 * f)
     for i in range(0, data.shape[1], slice_size):
         if i + slice_size <= data.shape[1]:
             slice_2d = data[:, i : (i + slice_size)]
