@@ -9,7 +9,8 @@ import pandas as pd
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
-from scipy.signal import resample
+from scipy.signal import resample, butter, lfilter
+from scipy.fft import fft, ifft
 
 #%%
 def load_data_LOSO (data_path, subject, dataset): 
@@ -141,6 +142,13 @@ def up_sample(input_arr, old_rate=128, new_rate=250):
     resampled_arr = resample(input_arr, new_length)
     return resampled_arr
 
+def butter_bandpass(lowcut=8, highcut=30, fs=250, order=4):
+    nyquist = 0.5 * fs
+    low = lowcut/nyquist
+    high = highcut/nyquist
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
 def read_raw_data(dir):
     df = pd.read_csv(dir, header=None)
     arr = df.to_numpy()
@@ -177,8 +185,8 @@ def process_VKIST_data(setup, X, y):
     
     X_return = np.array(X_return)
     y_return = np.array(y)
-    X_train, X_test = np.split(X_return, [int(0.8 * X_return.shape[0])], axis=0)
-    y_train, y_test = np.split(np.array(y_return) - np.min(y_return), [int(0.8 * y_return.shape[0])], axis=0)
+    X_train, X_test = np.split(X_return, [int(0.95 * X_return.shape[0])], axis=0)
+    y_train, y_test = np.split(np.array(y_return) - np.min(y_return), [int(0.95 * y_return.shape[0])], axis=0)
     # y_train_onehot = to_categorical(y_train)
 
     return X_train, y_train, X_test, y_test
@@ -219,7 +227,16 @@ def load_VKIST_data(data_path, all_trials = True):
     temp = []
     electrodes_map = [0, 1, 2, 11, 12, 13, 3, 4, 5, 6, 14, 15, 16, 7, 8, 19, 18, 17, 9, 10, 20, 21]
     for i in electrodes_map:
-        temp.append(up_sample(X_train[i]))
+        fft_signal = fft(X_train[i])
+        up_sampled_signal = up_sample(fft_signal)
+        b, a = butter_bandpass()
+        filtered_signal = lfilter(b, a, up_sampled_signal)
+        ifft_signal = ifft(filtered_signal)
+        real_part = np.real(filtered_signal)
+        imag_part = np.imag(filtered_signal)
+        combined_signal = np.stack((real_part, imag_part), axis=-1)
+        # print(real_imag_concatenated.shape)
+        temp.append(combined_signal)
     X_train = temp
     
     X_train, y_train, X_test, y_test = process_VKIST_data(setup, X_train, y_train)
@@ -266,13 +283,21 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
         X_test, y_test = shuffle(X_test, y_test,random_state=42)
 
     # Prepare training data     
-    N_tr, N_ch, T = X_train.shape 
-    X_train = X_train.reshape(N_tr, 1, N_ch, T)
-    y_train_onehot = to_categorical(y_train)
+    if dataset == 'VKIST':    
+        N_tr, N_ch, T, L = X_train.shape 
+        X_train = X_train.reshape(N_tr, L, N_ch, T)
+        y_train_onehot = to_categorical(y_train)
     # Prepare testing data 
-    N_tr, N_ch, T = X_test.shape 
-    X_test = X_test.reshape(N_tr, 1, N_ch, T)
-    y_test_onehot = to_categorical(y_test)    
+        N_tr, N_ch, T, L = X_test.shape 
+        X_test = X_test.reshape(N_tr, L, N_ch, T)
+        y_test_onehot = to_categorical(y_test)
+    else:
+        N_tr, N_ch, T = X_train.shape 
+        X_train = X_train.reshape(N_tr, 1, N_ch, T)
+        y_train_onehot = to_categorical(y_train)
+        N_tr, N_ch, T = X_test.shape 
+        X_test = X_test.reshape(N_tr, 1, N_ch, T)
+        y_test_onehot = to_categorical(y_test) 
     
     # Standardize the data
     if isStandard:
@@ -280,10 +305,11 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
 
     return X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot
 
-X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST', isStandard=False, isShuffle=False)
-print(X_train.shape)
-print(y_train.shape)
-print(y_train_onehot.shape)
-print(X_test.shape)
-print(y_test.shape)
-print(y_test_onehot.shape)
+# X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST', isStandard=False, isShuffle=False)
+# print(X_train.shape)
+# print(y_train.shape)
+# print(y_train_onehot.shape)
+# print(X_test.shape)
+# # print(X_test)
+# print(y_test.shape)
+# print(y_test_onehot.shape)

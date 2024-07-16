@@ -451,8 +451,20 @@ def EEGNeX_8_32(n_timesteps, n_features, n_outputs):
     return model 
 
 #%% Reproduced EEGNet model: https://arxiv.org/abs/1611.08024
+def ComplexEEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=64, dropout_eeg=0.25):
+    input1 = Input(shape = (2,Chans, Samples))   
+    input2 = Permute((3,2,1))(input1) 
+    regRate=.25
+
+    eegnet = EEGNet(input_layer=input2, F1=F1, kernLength=kernLength, D=D, Chans=Chans, dropout=dropout_eeg)
+    eegnet = Flatten()(eegnet)
+    dense = Dense(n_classes, name = 'dense',kernel_constraint = max_norm(regRate))(eegnet)
+    softmax = Activation('softmax', name = 'softmax')(dense)
+
+    return Model(inputs=input1, outputs=softmax)
+
 def EEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=64, dropout_eeg=0.25):
-    input1 = Input(shape = (1,Chans, Samples))   
+    input1 = Input(shape = (1,Chans, Samples), dtype='complex128')   
     input2 = Permute((3,2,1))(input1) 
     regRate=.25
 
