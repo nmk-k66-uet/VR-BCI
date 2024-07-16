@@ -14,6 +14,8 @@ import time
 from PIL import Image
 import ctypes
 from playsound import playsound
+import configparser
+import re
 
 user32 = ctypes.windll.user32
 user32.SetProcessDPIAware()
@@ -22,6 +24,8 @@ CTk.set_appearance_mode("light")
 CTk.set_default_color_theme("green")
 server_running = False
 recording_in_progress = False
+config = configparser.ConfigParser()
+config.read("config.conf")
 
 genders = ["Nam", "Nữ"]
 # Actions include: Rest, Cue, Right Hand, Left Hand, Right Feet, Left Feet,
@@ -30,8 +34,11 @@ genders = ["Nam", "Nữ"]
 Action = Enum("Action", ["R", "C", "RH", "LH", "RF",
               "LF", "PTL", "PTR", "B", "OCM", "NH", "SH", "LHOC", "RHOC", "T", "A", "M"])
 
-HOST, PORT = "192.168.137.1", 8000
-
+# HOST, PORT = "192.168.137.1", 8000
+HOST = config["DEFAULT"]["HostIP"]
+PORT = int(config["DEFAULT"]["ReceivePort"])
+print(HOST)
+print(PORT)
 # Add elements to Settings Tab
 
 # Color theme picker
@@ -190,7 +197,8 @@ class App(CTk.CTk):
 
         self.submit_button = CTk.CTkButton(
             self.home_patient_info_frame, text="Gửi", font=("Arial", 18), command=self.submit)
-
+        self.patient_information_submitted = False
+        self.patient_information_sent = False
         # Recorder entry field
         self.recording_facility_name_entry = CTk.CTkEntry(self.home_recorder_info_frame, placeholder_text="Nhập tên đơn vị thu",
                                                           height=40, width=240, font=("Arial", 18))
@@ -445,7 +453,7 @@ class App(CTk.CTk):
         self.hands_exercise_image_label = CTk.CTkLabel(
             self.training_setting_frame, image=self.hands_exercise_image, text="")
         self.hands_exercise_option = CTk.CTkRadioButton(
-            master=self.training_setting_frame, command=self.get_exercise,
+            master=self.training_setting_frame, command=self.get_exercise_scheme,
             variable=self.current_exercise, value="Hands", text=""
         )
         self.left_hand_right_foot_exercise_image = CTk.CTkImage(light_image=Image.open(
@@ -453,16 +461,16 @@ class App(CTk.CTk):
         self.left_hand_right_foot_exercise_image_label = CTk.CTkLabel(
             self.training_setting_frame, image=self.left_hand_right_foot_exercise_image, text="")
         self.left_hand_right_foot_exercise_option = CTk.CTkRadioButton(
-            master=self.training_setting_frame, command=self.get_exercise,
+            master=self.training_setting_frame, command=self.get_exercise_scheme,
             variable=self.current_exercise, value="Left Hand Right Foot", text=""
         )
-       
+
         self.right_hand_left_foot_exercise_image = CTk.CTkImage(light_image=Image.open(
             "assets/images/right_hand_left_foot_exercise.png"), size=(200, 200))
         self.right_hand_left_foot_exercise_image_label = CTk.CTkLabel(
             self.training_setting_frame, image=self.right_hand_left_foot_exercise_image, text="")
         self.right_hand_left_foot_exercise_option = CTk.CTkRadioButton(
-            master=self.training_setting_frame, command=self.get_exercise,
+            master=self.training_setting_frame, command=self.get_exercise_scheme,
             variable=self.current_exercise, value="Right Hand Left Foot", text=""
         )
 
@@ -471,9 +479,11 @@ class App(CTk.CTk):
         self.training_setting_frame_label.grid(row=0, column=0, columnspan=2)
         self.hands_exercise_image_label.grid(row=1, column=0, sticky="we")
         self.hands_exercise_option.grid(row=1, column=1)
-        self.left_hand_right_foot_exercise_image_label.grid(row=2, column=0, sticky="we")
+        self.left_hand_right_foot_exercise_image_label.grid(
+            row=2, column=0, sticky="we")
         self.left_hand_right_foot_exercise_option.grid(row=2, column=1)
-        self.right_hand_left_foot_exercise_image_label.grid(row=3, column=0, sticky="we")
+        self.right_hand_left_foot_exercise_image_label.grid(
+            row=3, column=0, sticky="we")
         self.right_hand_left_foot_exercise_option.grid(row=3, column=1)
 
         # ---------------------Settings---------------------#
@@ -503,26 +513,56 @@ class App(CTk.CTk):
             self.eeg_connection_switch.configure(
                 text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
 
+    # TODO: create module to handle message sending for each catergory
     def handle_client_connection(self, client_socket):
         message = ""
         last_message = ""
         while True:
             try:
-                if self.current_exercise.get() == "Hands":
-                    message = "0" 
-                if self.current_exercise.get() == "Left Hand Right Foot":
-                    message = "1"
-                if self.current_exercise.get() == "Right Hand Left Foot":
-                    message = "2"
+                if (self.patient_information_submitted and not self.patient_information_sent):
+                    message = self.get_patient_information_message()
+                if (self.patient_information_sent):
+                    message = self.get_current_exercise_message()
                 if (message != "" and message != last_message):
-                    client_socket.send(bytes(message,'utf-8'))
-                    print("Sending" + message)
+                    client_socket.send(bytes(message, 'utf-8'))
+                    print("Sending " + message)
+                    if (len(message) == 2):
+                        self.patient_information_sent = True
                     last_message = message
                 time.sleep(2)
             except ConnectionResetError:
                 print(ConnectionResetError)
                 break
-        client_socket[0].close()
+        client_socket.close()
+
+    def get_patient_information_message(self):
+        message = ""
+        gender = self.gender_options.get()
+        if gender == "Nam":
+            message += "M"  # Male
+        elif gender == "Nữ":
+            message += "F"
+
+        age = int(self.age_entry.get())
+        if age > 50:
+            message += "O"
+        else:
+            message += "Y"
+        # Final patient info message should be MY, MO, FY, FO
+        if len(message) == 2:
+            return message
+        else:
+            return ""
+
+    # TODO: change to get_current_exercise_scheme for making a one-time selection of the training environment, exercises and app training tab UI
+    def get_current_exercise_message(self):
+        if self.current_exercise.get() == "Hands":
+            return "0"
+        elif self.current_exercise.get() == "Left Hand Right Foot":
+            return "1"
+        elif self.current_exercise.get() == "Right Hand Left Foot":
+            return "2"
+        return ""
 
     def start_server(self):
         global server_running
@@ -559,9 +599,20 @@ class App(CTk.CTk):
                 text="Kết nối kính VR | Đã ngắt kết nối", font=("Arial", 18))
 
     def submit(self):  # TODO: Implement to send messages through TCP connection for character selection
-        pass
+        # Handle information need for character selection and file save
+        if self.name_entry.get() != "" and self.age_entry.get() != "" and self.location_entry.get() != "" and self.gender_options.get() != "":
+            self.generate_user_file()
+            self.patient_information_submitted = True
 
-        # add_border(self.home, 2, 6)
+    def generate_user_file(self):
+        user = {
+            "Name": self.name_entry.get(),
+            "Age": self.age_entry.get(),
+            "Gender": self.gender_options.get(),
+            "Location": self.location_entry.get()
+        }
+        with open(f"{self.get_user_file_path()}", "w") as file:
+            json.dump(user, file)
 
     # ----------------------Training----------------------#
     def get_training_setting(self):
@@ -606,6 +657,15 @@ class App(CTk.CTk):
         self.update_setting_label()
         print(self.recording_scheme_per_run)
         self.disable_entries_and_buttons(widgets)
+
+    def normalize_string(s):
+        # Remove punctuation
+        s = re.sub(r'[^\w\s]', '', s)
+
+        # Remove extra whitespace
+        s = re.sub(r'\s+', ' ', s).strip()
+
+        return s
 
     def set_character_setting(self):
         widgets = self.get_childrens(self.recording_duration_config_frame) + \
@@ -964,11 +1024,11 @@ class App(CTk.CTk):
             "calibrated": self.calibration_flag.get(),
             "num_of_runs": self.repeated_runs
         }
-        with open(f"{self.get_file_path('json')}", "w") as file:
+        with open(f"{self.get_data_file_path('json')}", "w") as file:
             json.dump(setting, file)
 
     def generate_label_file(self):  # Call when recording is finished
-        with open(f"{self.get_file_path('txt')}", "w") as file:
+        with open(f"{self.get_data_file_path('txt')}", "w") as file:
             for action in self.calibration_scheme:
                 file.write(f"{action[0].value}" + '\n')
             for i in range(0, self.repeated_runs):
@@ -978,7 +1038,7 @@ class App(CTk.CTk):
     def generate_data_file(self, data):
         data = np.array(data)
         df = pd.DataFrame(data)
-        df.to_csv(f"{self.get_file_path('csv')}", index=False)
+        df.to_csv(f"{self.get_data_file_path('csv')}", index=False)
 
     # TODO: sync sample pull with system clock with the lowest error margin possible (<1ms)
     def pull_eeg_data(self):
@@ -1103,16 +1163,16 @@ class App(CTk.CTk):
         self.eeg_thread = None
 
     # ----------------------Training----------------------#
-    def get_exercise(self):
+    def get_exercise_scheme(self):
         print("Getting exercise...")
         if self.current_exercise.get() == "Hands":
             self.set_hands_exercise()
         elif self.current_exercise.get() == "Left Hand Right Foot":
             self.set_left_hand_right_foot_exercise()
         elif self.current_exercise.get() == "Right Hand Left Foot":
-            self.set_right_hand_left_foot_exercise() 
-        #TODO: Send command to VR interface to change the exercise type
-    
+            self.set_right_hand_left_foot_exercise()
+        # TODO: Send command to VR interface to change the exercise environment
+
     def set_hands_exercise(self):
         pass
 
@@ -1200,21 +1260,23 @@ class App(CTk.CTk):
 
     # TODO: get the folder directory that the user chooses
     # TODO: add location and recording device name to folder tree
-    def get_file_path(self, file_type):
-        if self.name_entry.get() != "" and self.location_entry.get() != "" and self.recording_device_name_entry.get() != "":
+    def get_user_file_path(self):
+        file_path = "user/" + self.normalize_string(self.name_entry.get()) + "_" + (
+            "M" if self.gender_options.get() == "Nam" else "F") + "_" + self.normalize_string(self.age_entry.get()) + ".json"
+        return file_path
 
-            dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + "/" + self.current_recording_setting.get() + \
-                "/" + self.name_entry.get()
-            if os.path.isdir(dir_path) == False:
-                os.makedirs(dir_path)
-                print("Directory created")
-            file_path = dir_path + "/" + self.name_entry.get() + "_" + self.containsArtifact() + \
-                datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "_" + self.location_entry.get() + \
-                "_" + self.recording_device_name_entry.get() + "." + file_type
-            return file_path
-        else:
-            self.show_error_message(
-                "Chưa có đủ các trường dữ liệu: Tên, Địa điểm, Máy thu")
+    def get_data_file_path(self, file_type):
+        dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + "/" + self.normalize_string(self.current_recording_setting.get()) + \
+            "/" + self.normalize_string(self.name_entry.get())
+        if os.path.isdir(dir_path) == False:
+            os.makedirs(dir_path)
+            print("Directory created")
+        file_path = dir_path + "/" + self.normalize_string(self.name_entry.get()) + "_" + self.containsArtifact() + \
+            datetime.now().strftime("%d_%B_%Y_%H_%M_%S") + "_" + self.normalize_string(self.location_entry.get()) + \
+            "_" + \
+            self.normalize_string(
+                self.recording_device_name_entry.get()) + "." + file_type
+        return file_path
 
     def init_cue_window(self):
         self.update_run_config()
