@@ -658,7 +658,7 @@ class App(CTk.CTk):
         print(self.recording_scheme_per_run)
         self.disable_entries_and_buttons(widgets)
 
-    def normalize_string(s):
+    def normalize_string(self, s):
         # Remove punctuation
         s = re.sub(r'[^\w\s]', '', s)
 
