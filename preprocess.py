@@ -9,7 +9,7 @@ import pandas as pd
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
-from scipy.signal import resample, butter, lfilter
+from scipy.signal import resample, butter, lfilter, filtfilt
 from scipy.fft import fft, ifft
 
 #%%
@@ -155,7 +155,7 @@ def read_raw_data(dir):
     arr = np.delete(arr, 0, axis=0).transpose()
     return arr
 
-def process_VKIST_data(setup, X, y):
+def process_VKIST_data(setup, X, y, group=False):
     data, X_return, y_return = [], [], None
     cur_sample, f = 0, 250
     for i in range(0, 22):
@@ -169,19 +169,35 @@ def process_VKIST_data(setup, X, y):
             case 2:
                 cur_sample += int((dur - 0.5) * f)
                 y.remove(label)
+            case 5:
+                cur_sample += (dur * f)
+                y.remove(label)
+            case 6:
+                cur_sample += (dur * f)
+                y.remove(label) 
             case default:
                 begin = cur_sample
                 end = cur_sample + int((dur + 0.5) * f)
                 for i in range(0, len(X)):
                     data[i] = [*data[i], *X[i][begin : end]]
                     cur_sample = end
+    
+    if group == True:
+        for i in range (len(y)):
+            if y[i] == 6:
+                y[i] = 5
 
     data = np.array(data)
     slice_size = int(4.5 * f)
     for i in range(0, data.shape[1], slice_size):
         if i + slice_size <= data.shape[1]:
             slice_2d = data[:, i : (i + slice_size)]
-            X_return.append(slice_2d)
+            # print(slice_2d.shape)
+            slice_2d = np.fft.fft2(slice_2d)
+            real_part = np.real(slice_2d)
+            imag_part = np.imag(slice_2d)
+            combined_signal = np.stack((real_part, imag_part), axis=-1)
+            X_return.append(combined_signal)
     
     X_return = np.array(X_return)
     y_return = np.array(y)
@@ -191,7 +207,7 @@ def process_VKIST_data(setup, X, y):
 
     return X_train, y_train, X_test, y_test
 
-def load_VKIST_data(data_path, all_trials = True):
+def load_VKIST_data(data_path, all_trials = True, group = False):
     setup, calibrated, no_runs, X_train, y_train, X_test, y_test = None, None, None, None, None, None, None
 
     for folder in os.listdir(data_path):
@@ -225,33 +241,43 @@ def load_VKIST_data(data_path, all_trials = True):
                         y_train = labels
 
     temp = []
-    electrodes_map = [0, 1, 2, 11, 12, 13, 3, 4, 5, 6, 14, 15, 16, 7, 8, 19, 18, 17, 9, 10, 20, 21]
+    # electrodes_map = [0, 1, 2, 11, 12, 13, 3, 4, 5, 6, 14, 15, 16, 7, 8, 19, 18, 17, 9, 10, 20, 21]
+    electrodes_map = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
     for i in electrodes_map:
-        fft_signal = fft(X_train[i])
-        up_sampled_signal = up_sample(fft_signal)
-        b, a = butter_bandpass()
-        filtered_signal = lfilter(b, a, up_sampled_signal)
-        ifft_signal = ifft(filtered_signal)
-        real_part = np.real(filtered_signal)
-        imag_part = np.imag(filtered_signal)
-        combined_signal = np.stack((real_part, imag_part), axis=-1)
-        # print(real_imag_concatenated.shape)
-        temp.append(combined_signal)
+        # fft_signal = fft(X_train[i])
+        b, a = butter_bandpass(fs=128)
+        filtered_signal = filtfilt(b, a, X_train[i])
+        up_sampled_signal = up_sample(filtered_signal)
+        # ifft_signal = ifft(filtered_signal)
+        # real_part = np.real(filtered_signal)
+        # imag_part = np.imag(filtered_signal)
+        # combined_signal = np.stack((real_part, imag_part), axis=-1)
+        # # print(real_imag_concatenated.shape)
+        temp.append(up_sampled_signal)
     X_train = temp
     
-    X_train, y_train, X_test, y_test = process_VKIST_data(setup, X_train, y_train)
+    X_train, y_train, X_test, y_test = process_VKIST_data(setup, X_train, y_train, group)
 
     return X_train, y_train, X_test, y_test
 
 #%%
-def standardize_data(X_train, X_test, channels): 
+def standardize_data(X_train, X_test, channels, isComplex=False): 
     # X_train & X_test :[Trials, MI-tasks, Channels, Time points]
-    for j in range(channels):
-          scaler = StandardScaler()
-          scaler.fit(X_train[:, 0, j, :])
-          X_train[:, 0, j, :] = scaler.transform(X_train[:, 0, j, :])
-          X_test[:, 0, j, :] = scaler.transform(X_test[:, 0, j, :])
-
+    if isComplex == False:
+        for j in range(channels):
+            scaler = StandardScaler()
+            scaler.fit(X_train[:, 0, j, :])
+            X_train[:, 0, j, :] = scaler.transform(X_train[:, 0, j, :])
+            X_test[:, 0, j, :] = scaler.transform(X_test[:, 0, j, :])
+    else:
+        num_parts = 2
+        for j in range(channels):
+            scaler = StandardScaler()
+            X_train_reshaped = X_train[:,:,j,:].reshape(-1, X_train.shape[-1])
+            scaler.fit(X_train_reshaped)
+            for part in range(num_parts):
+                X_train[:, part, j, :] = scaler.transform(X_train[:, part, j, :])
+                X_test[:, part, j, :] = scaler.transform(X_test[:, part, j, :])
     return X_train, X_test
 
 #%%
@@ -276,6 +302,12 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
         elif (dataset == 'VKIST'):
             path = 'data/VKIST'
             X_train, y_train, X_test, y_test = load_VKIST_data(path, True)
+        elif (dataset == 'VKIST2'):
+            path = 'data/VKIST'
+            X_train, y_train, X_test, y_test = load_VKIST_data(path, all_trials = False, group=True)
+        elif (dataset == 'VKIST3'):
+            path = 'data/VKIST'
+            X_train, y_train, X_test, y_test = load_VKIST_data(path, all_trials = False, group=False)
 
     # shuffle the data 
     if isShuffle:
@@ -283,8 +315,8 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
         X_test, y_test = shuffle(X_test, y_test,random_state=42)
 
     # Prepare training data     
-    if dataset == 'VKIST':    
-        N_tr, N_ch, T, L = X_train.shape 
+    if dataset == 'VKIST' or dataset == 'VKIST2' or dataset == 'VKIST3':    
+        N_tr, N_ch, T, L= X_train.shape 
         X_train = X_train.reshape(N_tr, L, N_ch, T)
         y_train_onehot = to_categorical(y_train)
     # Prepare testing data 
@@ -295,21 +327,31 @@ def get_data(path, subject, dataset = 'BCI2a', classes_labels = 'all', LOSO = Fa
         N_tr, N_ch, T = X_train.shape 
         X_train = X_train.reshape(N_tr, 1, N_ch, T)
         y_train_onehot = to_categorical(y_train)
+    # Prepare testing data 
         N_tr, N_ch, T = X_test.shape 
         X_test = X_test.reshape(N_tr, 1, N_ch, T)
-        y_test_onehot = to_categorical(y_test) 
+        y_test_onehot = to_categorical(y_test)
     
     # Standardize the data
     if isStandard:
-        X_train, X_test = standardize_data(X_train, X_test, N_ch)
+        if dataset != 'VKIST2' and dataset != 'VKIST3':
+            X_train, X_test = standardize_data(X_train, X_test, N_ch)
+        else:
+            X_train, X_test = standardize_data(X_train, X_test, N_ch, isComplex=True)
 
     return X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot
 
-# X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST', isStandard=False, isShuffle=False)
-# print(X_train.shape)
-# print(y_train.shape)
-# print(y_train_onehot.shape)
-# print(X_test.shape)
-# # print(X_test)
-# print(y_test.shape)
-# print(y_test_onehot.shape)
+X_train, y_train, y_train_onehot, X_test, y_test, y_test_onehot = get_data('data/VKIST', 0, 'VKIST3', isStandard=True, isShuffle=False)
+print(X_train.shape)
+print(y_train.shape)
+# print(y_train)
+print(y_train_onehot.shape)
+print(X_test.shape)
+# print(X_test)
+print(y_test.shape)
+print(y_test)
+print(y_test_onehot.shape)
+df = pd.DataFrame(X_test[0:])
+df.to_excel('output.xlsx', sheet_name='Sheet1', index=False, header=False)
+df = pd.DataFrame(X_test[1:])
+df.to_excel('output.xlsx', sheet_name='Sheet2', index=False, header=False)

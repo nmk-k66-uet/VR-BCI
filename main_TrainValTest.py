@@ -254,7 +254,7 @@ def test(model, dataset_conf, results_path, allRuns = True):
 #%%
 def run(mode = "Train", model = "ATCNet"):
     # Define dataset parameters
-    dataset = 'BCI2a' # Options: 'BCI2a','HGD', 'CS2R'
+    dataset = 'VKIST2' # Options: 'BCI2a','HGD', 'CS2R'
     # print(os.getcwd())
     if dataset == 'BCI2a': 
         in_samples = 1125
@@ -287,6 +287,20 @@ def run(mode = "Train", model = "ATCNet"):
         n_classes = 4
         classes_labels = ['Right hand', 'Left hand', 'Right feet', 'Left feet']
         data_path = './data/VKIST'
+    elif dataset == 'VKIST2':
+        in_samples = 1125
+        n_channels = 22
+        n_sub = 1
+        n_classes = 3
+        classes_labels = ['Right hand', 'Left hand', 'Feet']
+        data_path = './data/VKIST'
+    elif dataset == 'VKIST3':
+        in_samples = 1125
+        n_channels = 22
+        n_sub = 1
+        n_classes = 2
+        classes_labels = ['Right hand', 'Left hand']
+        data_path = './data/VKIST'
     else:
         raise Exception("'{}' dataset is not supported yet!".format(dataset))
            
@@ -295,11 +309,11 @@ def run(mode = "Train", model = "ATCNet"):
                     'n_sub': n_sub, 'n_channels': n_channels, 'in_samples': in_samples,
                     'data_path': data_path, 'isStandard': True, 'LOSO': False}
     # Set training hyperparamters
-    train_conf = { 'batch_size': 128, 'epochs': 1000, 'patience': 100, 'lr': 0.001,'n_train': 1,
+    train_conf = { 'batch_size': 128, 'epochs': 1000, 'patience': 300, 'lr': 0.0009,'n_train': 1,
                   'LearnCurves': True, 'from_logits': False, 'model':model}
 
     # Create a folder to store the results of the experiment
-    results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model')) + "_paper"
+    results_path = os.getcwd() + "/results" + "_" + str(train_conf.get('model')) + "_" + dataset + "_Dependent"
     if not os.path.exists(results_path):
       os.makedirs(results_path)   # Create a new directory if it does not exist 
     print("#### .... #### Running on " + model + " #### .... ####")
@@ -315,7 +329,8 @@ def run(mode = "Train", model = "ATCNet"):
 
 #%%
 if __name__ == "__main__":
-    models = ["DeepConvNet", "ShallowConvNet"]
+    # models = ["ATCNet", "EEGNet", "EEGTCNet", "MBEEG_SENet", "TCNet_Fusion", "DeepConvNet", "ShallowConvNet"]
+    models = ["ComplexDBEEGNet"]
     for model in models:
         run("Train", model)
         run("Test", model)

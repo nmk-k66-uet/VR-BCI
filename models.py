@@ -1,14 +1,16 @@
 #%%
 import tensorflow as tf
+import numpy as np
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import (Dense, Dropout, Activation, AveragePooling2D, MaxPooling2D,
                                      Conv1D, Conv2D, SeparableConv2D, DepthwiseConv2D, BatchNormalization, 
                                      Reshape, LayerNormalization, Flatten, Add, Concatenate, Lambda, Input, 
-                                     Permute, multiply, GlobalAveragePooling1D)
-from tensorflow.keras.regularizers import L2
+                                     Permute, multiply, GlobalAveragePooling1D, GlobalAveragePooling2D, Multiply)
+from tensorflow.keras.regularizers import L2, l2
 from tensorflow.keras.constraints import max_norm
 from tensorflow.keras import backend as K
 from attention_models import attention_block
+from tensorflow.keras.optimizers import Adam
 
 #%% The proposed ATCNet model, https://doi.org/10.1109/TII.2022.3197419
 def ATCNet_(n_classes, in_chans = 22, in_samples = 1125, n_windows = 5, attention = 'mha', 
@@ -450,7 +452,6 @@ def EEGNeX_8_32(n_timesteps, n_features, n_outputs):
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     return model 
 
-#%% Reproduced EEGNet model: https://arxiv.org/abs/1611.08024
 def ComplexEEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=64, dropout_eeg=0.25):
     input1 = Input(shape = (2,Chans, Samples))   
     input2 = Permute((3,2,1))(input1) 
@@ -463,8 +464,9 @@ def ComplexEEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernL
 
     return Model(inputs=input1, outputs=softmax)
 
+#%% Reproduced EEGNet model: https://arxiv.org/abs/1611.08024
 def EEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=64, dropout_eeg=0.25):
-    input1 = Input(shape = (1,Chans, Samples), dtype='complex128')   
+    input1 = Input(shape = (1,Chans, Samples))   
     input2 = Permute((3,2,1))(input1) 
     regRate=.25
 
@@ -475,7 +477,53 @@ def EEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=6
     
     return Model(inputs=input1, outputs=softmax)
 
-def EEGNet(input_layer, F1=8, kernLength=64, D=2, Chans=22, dropout=0.25):
+def ComplexDBEEGNet_classifier(n_classes, Chans=22, Samples=1125, F1=8, D=2, kernLength=64, dropout_eeg=0.25):
+    input1 = Input(shape = (2,Chans, Samples))   
+    regRate=.25
+
+    real_part = input1[:,0,:,:]
+    imag_part = input1[:,1,:,:]
+    real_part = Reshape((Chans, Samples, 1))(real_part)
+    imag_part = Reshape((Chans, Samples, 1))(imag_part)
+
+    eegnet_real = EEGNet(input_layer=real_part, F1=F1, kernLength=kernLength, D=D, Chans=Chans, dropout=dropout_eeg)
+    eegnet_real = Flatten()(eegnet_real)
+
+    eegnet_imag = EEGNet(input_layer=imag_part, F1=F1, kernLength=kernLength, D=D, Chans=Chans, dropout=dropout_eeg)
+    eegnet_imag = Flatten()(eegnet_imag)
+
+    merged_features = Concatenate()([eegnet_real, eegnet_imag])
+
+    dense = Dense(n_classes, name = 'dense',kernel_constraint = max_norm(regRate), kernel_regularizer=l2(0.01))(merged_features)
+    softmax = Activation('softmax', name = 'softmax')(dense)
+
+    return Model(inputs=input1, outputs=softmax)
+
+def residual_block(x, filters, kernel_size, dropout_rate):
+    shortcut = x
+    x = Conv2D(filters, kernel_size, padding='same', use_bias=False)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dropout(dropout_rate)(x)
+
+    x = Conv2D(filters, kernel_size, padding='same', use_bias=False)(x)
+    x = BatchNormalization()(x)
+
+    x = Add()([x, shortcut])
+    x = Activation('relu')(x)
+    return x
+
+def attention_block(x):
+    channels = x.shape[-1]
+    avg_pool = GlobalAveragePooling2D()(x)
+    avg_pool = Dense(channels // 16, activation='relu')(avg_pool)
+    avg_pool = Dense(channels, activation='sigmoid')(avg_pool)
+    avg_pool = Reshape((1, 1, channels))(avg_pool)
+    
+    x = Multiply()([x, avg_pool])
+    return x
+
+def EEGNet(input_layer, F1=32, kernLength=256, D=4, Chans=22, dropout=0.5):
     """ EEGNet model from Lawhern et al 2018
     See details at https://arxiv.org/abs/1611.08024
     
@@ -496,21 +544,29 @@ def EEGNet(input_layer, F1=8, kernLength=64, D=2, Chans=22, dropout=0.25):
     F2= F1*D
     block1 = Conv2D(F1, (kernLength, 1), padding = 'same',data_format='channels_last',use_bias = False)(input_layer)
     block1 = BatchNormalization(axis = -1)(block1)
+    block1 = Activation('elu')(block1)
+    block1 = Dropout(dropout)(block1)
+
+    block1 = residual_block(block1, F1, (kernLength, 1), dropout)
+    block1 = attention_block(block1)
+
     block2 = DepthwiseConv2D((1, Chans), use_bias = False, 
                                     depth_multiplier = D,
                                     data_format='channels_last',
                                     depthwise_constraint = max_norm(1.))(block1)
     block2 = BatchNormalization(axis = -1)(block2)
     block2 = Activation('elu')(block2)
-    block2 = AveragePooling2D((8,1),data_format='channels_last')(block2)
+    block2 = AveragePooling2D((2,1),data_format='channels_last')(block2)
     block2 = Dropout(dropout)(block2)
-    block3 = SeparableConv2D(F2, (16, 1),
+
+    block3 = SeparableConv2D(F2, (32, 1),
                             data_format='channels_last',
                             use_bias = False, padding = 'same')(block2)
     block3 = BatchNormalization(axis = -1)(block3)
     block3 = Activation('elu')(block3)
-    block3 = AveragePooling2D((8,1),data_format='channels_last')(block3)
+    block3 = AveragePooling2D((2,1),data_format='channels_last')(block3)
     block3 = Dropout(dropout)(block3)
+
     return block3
 
 #%% Reproduced DeepConvNet model: https://doi.org/10.1002/hbm.23730
