@@ -16,6 +16,11 @@ import ctypes
 from playsound import playsound
 import configparser
 import re
+import collections
+import tensorflow as tf
+from scipy.signal import resample, butter, filtfilt
+import models
+import random
 
 user32 = ctypes.windll.user32
 user32.SetProcessDPIAware()
@@ -444,6 +449,15 @@ class App(CTk.CTk):
         self.training_setting_frame.grid_rowconfigure(3, weight=1)
         self.training_setting_frame.grid_columnconfigure(0, weight=4)
         self.training_setting_frame.grid_columnconfigure(1, weight=1)
+        
+        self.training_info_frame = CTk.CTkFrame(
+            master=self.training, fg_color="floral white"
+        )
+        self.training_info_frame.grid_columnconfigure(0, weight=1)
+        self.training_info_frame.grid_columnconfigure(1, weight=1)
+        self.training_info_frame.grid_rowconfigure(0, weight=1)
+        self.training_info_frame.grid_rowconfigure(1, weight=3)
+
 
         # Training setting widget
         self.training_setting_frame_label = CTk.CTkLabel(
@@ -473,9 +487,40 @@ class App(CTk.CTk):
             master=self.training_setting_frame, command=self.get_exercise_scheme,
             variable=self.current_exercise, value="Right Hand Left Foot", text=""
         )
+        
+        # region Training info widget
+        self.data_buffer = []
+        self.group = []
+        self.model = models.ComplexDBEEGNet_classifier(2, 22, 1125)
+        self.model.load_weights('subject-1.weights.h5', by_name=True, skip_mismatch=True)
+
+        self.start_training_button = CTk.CTkButton(self.training_info_frame, text="Bắt đầu luyện tập", font=(
+            "Arial", 18), command=self.start_training_session, height=40, width=100)
+        self.stop_training_button = CTk.CTkButton(self.training_info_frame, text="Kết thúc luyện tập", font=(
+            "Arial", 18), command=self.stop_training_session, height=40, width=100)
+
+        self.time_window = 4.5
+        self.update_rate = 0.5 
+
+        self.is_training = False
+        
+        self.training_thread = None
+        self.exercises_list = []
+        self.current_exercise_index = 0
+        
+        self.sample_count_since_full = 0
+        self.queue = False
+        self.counter = 0
+        self.trials_before_res = 6
+        self.message = ""
+        self.client_socket = 0
+        
+        # endregion
 
         # Widget layout assignment
         self.training_setting_frame.grid(row=0, column=0, sticky="nsew")
+        self.training_info_frame.grid(row=0, column=1, sticky="nsew")
+        
         self.training_setting_frame_label.grid(row=0, column=0, columnspan=2)
         self.hands_exercise_image_label.grid(row=1, column=0, sticky="we")
         self.hands_exercise_option.grid(row=1, column=1)
@@ -485,6 +530,10 @@ class App(CTk.CTk):
         self.right_hand_left_foot_exercise_image_label.grid(
             row=3, column=0, sticky="we")
         self.right_hand_left_foot_exercise_option.grid(row=3, column=1)
+        
+        self.start_training_button.grid(row=1, column=0, sticky="new")
+        self.stop_training_button.grid(row=1, column=0, sticky="sew")
+
 
         # ---------------------Settings---------------------#
         self.display_mode_flag = CTk.IntVar(value=0)
@@ -507,28 +556,25 @@ class App(CTk.CTk):
         else:
             print("Looking for a stream...")
             self.eeg_stream = resolve_stream('type', 'EEG')
-            # self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
-            # print(self.inlet)
-            # print(self.inlet.pull_sample())
             self.eeg_connection_switch.configure(
                 text="Kết nối thiết bị Emotiv | Đã kết nối", font=("Arial", 18))
 
     # TODO: create module to handle message sending for each catergory
     def handle_client_connection(self, client_socket):
-        message = ""
+        self.message = ""
         last_message = ""
         while True:
             try:
                 if (self.patient_information_submitted and not self.patient_information_sent):
-                    message = self.get_patient_information_message()
-                if (self.patient_information_sent):
-                    message = self.get_current_exercise_message()
-                if (message != "" and message != last_message):
-                    client_socket.send(bytes(message, 'utf-8'))
-                    print("Sending " + message)
-                    if (len(message) == 2):
+                    self.message = self.get_patient_information_message()
+                # if (self.patient_information_sent):
+                #     self.message = self.get_current_exercise_message()
+                if (self.message != "" and self.message != last_message):
+                    client_socket.send(bytes(self.message, 'utf-8'))
+                    print("Sending " + self.message)
+                    if (len(self.message) == 2 and self.message.isalpha()):
                         self.patient_information_sent = True
-                    last_message = message
+                    last_message = self.message
                 time.sleep(2)
             except ConnectionResetError:
                 print(ConnectionResetError)
@@ -555,14 +601,16 @@ class App(CTk.CTk):
             return ""
 
     # TODO: change to get_current_exercise_scheme for making a one-time selection of the training environment, exercises and app training tab UI
-    def get_current_exercise_message(self):
-        if self.current_exercise.get() == "Hands":
-            return "0"
-        elif self.current_exercise.get() == "Left Hand Right Foot":
-            return "1"
-        elif self.current_exercise.get() == "Right Hand Left Foot":
-            return "2"
-        return ""
+    # def get_current_exercise_message(self):
+    #     # if self.current_exercise.get() == "Hands":
+    #     #     return "0"
+    #     # elif self.current_exercise.get() == "Left Hand Right Foot":
+    #     #     return "1"
+    #     # elif self.current_exercise.get() == "Right Hand Left Foot":
+    #     #     return "2"
+    #     # return ""
+        
+        
 
     def start_server(self):
         global server_running
@@ -570,12 +618,15 @@ class App(CTk.CTk):
         server_socket.bind((HOST, PORT))
         server_socket.listen()
         print(f"Server started and listening on port {PORT}")
-        print(server_running)
         while server_running:
-            client_socket, addr = server_socket.accept()
+            self.client_socket, addr = server_socket.accept()
+            if (self.client_socket != None):
+                self.vr_connection.configure(
+                    text="Kết nối kính VR | Đã kết nối", font=("Arial", 18))
+
             print(f"Connected from {addr}")
             client_handler = threading.Thread(
-                target=self.handle_client_connection, args=(client_socket,))
+                target=self.handle_client_connection, args=(self.client_socket,))
             client_handler.start()
         server_socket.close()
 
@@ -591,8 +642,8 @@ class App(CTk.CTk):
             print(f"Initializing TCP connection...")
             server_running = True
             self.start_server_thread()
-            self.vr_connection.configure(
-                text="Kết nối kính VR | Đã kết nối", font=("Arial", 18))
+            # self.vr_connection.configure(
+            #     text="Kết nối kính VR | Đã kết nối", font=("Arial", 18))
         elif self.vr_connection_flag.get() == 0:
             server_running = False
             self.vr_connection.configure(
@@ -1181,6 +1232,149 @@ class App(CTk.CTk):
 
     def set_right_hand_left_foot_exercise(self):
         pass
+    
+    def start_training_session(self):
+        # On starting a training session:
+        #   - Send training scheme to Unity interface
+        #   - Start pulling EEG samples from LSL
+        #       + Plot these datas in a 10 second time window, updating every second
+        #       + Create a randomized training scheme for the session, consisting of 0 and 1, corresponding to left and right
+        #       + Infer from 12 4.5s overlapping windows, with an interval of 0.5s and see which result are more likely
+        #   - Continue for the entire training scheme or until stopped (stop_trainin_session)
+        self.patient_information_sent = True ##dummy
+        if (self.patient_information_sent == False):
+            self.show_error_message("Hãy nhập và gửi thông tin người bệnh!")
+        elif (self.current_exercise.get() == ""):
+            self.show_error_message("Hãy chọn bài tập!")
+        else:
+            self.is_training = True
+            self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
+            # self.data_buffer = np.zeros(
+            #     (self.time_window * self.sampling_frequency, self.inlet.channel_count - 5))
+            self.exercises_list = self.generate_random_exercise(10)
+            print(len(self.exercises_list))
+            self.start_training_thread()
+            # self.start_plotting_thread()
+        # self.update_data_buffer()
+
+    def stop_training_session(self):
+        self.is_training = False
+        self.inlet.close_stream()
+        self.inlet = None
+        del(self.training_thread)
+        self.training_thread = None
+
+    def update_data(self):
+        # inferred_data = []
+        inferred_trial_results = []
+        inferred_exercise_results = [] #expected length = len(self.exercises_list)
+        self.current_exercise_index = 0
+        current_exercise = self.exercises_list[self.current_exercise_index]
+        res = None
+        self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+        print("Sending: " + str(current_exercise))
+        while self.is_training and self.current_exercise_index < len(self.exercises_list):  
+            sample, timestamp = self.inlet.pull_sample()
+            if timestamp != None:
+                if len(self.data_buffer) == (self.time_window * self.sampling_frequency):
+                    if (self.sample_count_since_full == 0):
+                        print(" infer number:" + str(self.current_exercise_index))
+                        self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1
+                        # inferred_data.append(self.data_buffer)
+                        if len(self.group) == self.trials_before_res:
+                            #message contains 1 digit: 
+                            #first one is ref action (0, 1),
+                            #second one is character action(0, 1, 9) with 2 being no action
+
+                            counter = collections.Counter(self.group)
+                            res = counter.most_common(1)[0][0]
+                            inferred_trial_results.append(self.group)
+                            inferred_exercise_results.append(res)
+                            self.group = []
+                            self.data_buffer = []
+                            print("Result: " + str(res))
+                            if res == current_exercise:
+                                #If polled inference result matches ground truth:
+                                #Play animation
+                                self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
+                                print("Sending correct answer:" + str(current_exercise + 5))
+                                #Update training info
+                            else: 
+                                self.client_socket.send(bytes(str(9), "utf-8"))
+                            
+                            self.current_exercise_index += 1 
+                            if (self.current_exercise_index < len(self.exercises_list)):
+                                current_exercise = self.exercises_list[self.current_exercise_index] 
+                                # threading.Timer(5.0, self.client_socket.send(bytes(str(current_exercise), "utf-8"))).start()
+                                self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+                                print("Sending: " + str(current_exercise))
+
+                            time.sleep(5)
+                        
+                    self.sample_count_since_full += 1
+                    
+                    #After update_rate time
+                    if (self.sample_count_since_full == self.update_rate * self.sampling_frequency):
+                        self.sample_count_since_full = 0
+                    if(len(self.data_buffer) != 0): self.data_buffer.pop(0)
+                self.data_buffer.append(sample[3:len(sample)-2])
+        self.stop_training_session()   
+        print("Training stopped")    
+        
+    def infer(self, data, ground_truth):
+        def up_sample(input_arr, old_rate=128, new_rate=250):
+            new_length = int(len(input_arr) * new_rate / old_rate)
+            resampled_arr = resample(input_arr, new_length)
+            return resampled_arr
+
+        def butter_bandpass(lowcut=8, highcut=30, fs=250, order=4):
+            nyquist = 0.5 * fs
+            low = lowcut/nyquist
+            high = highcut/nyquist
+            b, a = butter(order, [low, high], btype='band')
+            return b, a
+
+        def process_VKIST_data(data):
+            slice_2d = np.fft.fft2(data)
+            real_part = np.real(slice_2d)
+            imag_part = np.imag(slice_2d)
+            combined_signal = np.stack((real_part, imag_part), axis=-1)
+            X_return = combined_signal
+            X_return = np.array(X_return)
+            return X_return
+        
+        temp = []
+    
+        data = np.array(data).transpose()
+        """
+            Preprocess signal of each electrodes: butter bandpass => upsample => fourier transform
+        """
+        for i in range(0, 22):
+            b, a = butter_bandpass(fs=128, lowcut=8, highcut=40)
+            filtered_signal = filtfilt(b, a, data[i])
+            up_sampled_signal = up_sample(filtered_signal)
+            temp.append(up_sampled_signal)
+        X_test = temp
+        X_test= process_VKIST_data(X_test)
+        y_test = ground_truth
+        """
+            Predict trial label. Accept variance <= 1% 
+        """
+        res = self.model.predict(X_test.reshape(1, 2, 22, 1125))
+        result = res.argmax(axis=-1)[0]
+        a = abs(res[0][1] - 1)
+        if y_test == 0:
+            if result == 1 and a <= 1:
+                result = 0
+        else:
+            if result == 0 and a <= 1:
+                result = 1
+        self.group.append(result) # Append each trial label into a group 
+    
+    def start_training_thread(self):
+        if self.training_thread == None or not self.training_thread.is_alive():
+            self.training_thread = threading.Thread(target=self.update_data, daemon=True)
+            self.training_thread.start()
     # ----------------------Settings----------------------#
     # Light and Dark Mode switch
 
@@ -1277,6 +1471,13 @@ class App(CTk.CTk):
             self.normalize_string(
                 self.recording_device_name_entry.get()) + "." + file_type
         return file_path
+    
+    
+    def generate_random_exercise(self, nums_of_exercises):
+        exercises = []
+        for i in range(0, nums_of_exercises):
+            exercises.append(random.randint(0,1))
+        return exercises
 
     def init_cue_window(self):
         self.update_run_config()
