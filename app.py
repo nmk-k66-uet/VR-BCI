@@ -456,8 +456,8 @@ class App(CTk.CTk):
         self.training_info_frame.grid_columnconfigure(0, weight=1)
         self.training_info_frame.grid_columnconfigure(1, weight=1)
         self.training_info_frame.grid_rowconfigure(0, weight=1)
-        self.training_info_frame.grid_rowconfigure(1, weight=3)
-
+        self.training_info_frame.grid_rowconfigure(1, weight=1)
+        self.training_info_frame.grid_rowconfigure(2, weight=2)
 
         # Training setting widget
         self.training_setting_frame_label = CTk.CTkLabel(
@@ -498,6 +498,16 @@ class App(CTk.CTk):
             "Arial", 18), command=self.start_training_session, height=40, width=100)
         self.stop_training_button = CTk.CTkButton(self.training_info_frame, text="Kết thúc luyện tập", font=(
             "Arial", 18), command=self.stop_training_session, height=40, width=100)
+        self.ground_truth_label = CTk.CTkLabel(
+            master=self.training_info_frame,  text="Bài tập hiện tại:", font=("Arial", 24))
+        self.ground_truth_value_label = CTk.CTkLabel(
+            master=self.training_info_frame, text="", font=("Arial", 24)
+        )
+        self.inferrence_label = CTk.CTkLabel(
+            master=self.training_info_frame,  text="Bài tập đã dự đoán:", font=("Arial", 24))
+        self.inferrence_value_label = CTk.CTkLabel(
+            master=self.training_info_frame,  text="", font=("Arial", 24))
+        
 
         self.time_window = 4.5
         self.update_rate = 0.5 
@@ -531,10 +541,14 @@ class App(CTk.CTk):
             row=3, column=0, sticky="we")
         self.right_hand_left_foot_exercise_option.grid(row=3, column=1)
         
-        self.start_training_button.grid(row=1, column=0, sticky="new")
-        self.stop_training_button.grid(row=1, column=0, sticky="sew")
-
-
+        self.ground_truth_label.grid(row=0, column=0, sticky="nsew")
+        self.ground_truth_value_label.grid(row=1, column=0, sticky="nsew")
+        self.inferrence_label.grid(row=0, column=1, sticky="nsew")
+        self.inferrence_value_label.grid(row=1, column=1, sticky="nsew")
+        
+        self.start_training_button.grid(row=2, column=0, sticky="ew")
+        self.stop_training_button.grid(row=2, column=1, sticky="ew")
+    
         # ---------------------Settings---------------------#
         self.display_mode_flag = CTk.IntVar(value=0)
         self.display_mode_switch = CTk.CTkSwitch(self.settings, text="Chế độ tối", font=("Arial", 18),
@@ -1273,6 +1287,7 @@ class App(CTk.CTk):
         res = None
         self.client_socket.send(bytes(str(current_exercise), "utf-8"))
         print("Sending: " + str(current_exercise))
+        self.ground_truth_value_label.configure(text=str(current_exercise))
         while self.is_training and self.current_exercise_index < len(self.exercises_list):  
             sample, timestamp = self.inlet.pull_sample()
             if timestamp != None:
@@ -1292,6 +1307,7 @@ class App(CTk.CTk):
                             inferred_exercise_results.append(res)
                             self.group = []
                             self.data_buffer = []
+                            self.inferrence_value_label.configure(text=str(res))
                             print("Result: " + str(res))
                             if res == current_exercise:
                                 #If polled inference result matches ground truth:
