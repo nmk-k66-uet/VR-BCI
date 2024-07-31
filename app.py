@@ -508,7 +508,16 @@ class App(CTk.CTk):
         self.inferrence_value_label = CTk.CTkLabel(
             master=self.training_info_frame,  text="", font=("Arial", 24))
         
-
+        self.training_exercise_images = [CTk.CTkImage(light_image=Image.open(
+            "assets/images/arrow_left_foot.png"), size=(380, 200)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_right_foot.png"), size=(380, 200)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_left_hand.png"), size=(380, 200)),
+            CTk.CTkImage(light_image=Image.open(
+                "assets/images/arrow_right_hand.png"), size=(380, 200))]
+        self.left_image = None
+        self.right_image = None 
         self.time_window = 4.5
         self.update_rate = 0.5 
 
@@ -523,7 +532,7 @@ class App(CTk.CTk):
         self.counter = 0
         self.trials_before_res = 6
         self.message = ""
-        self.client_socket = 0
+        self.client_socket = None
         
         # endregion
 
@@ -593,7 +602,7 @@ class App(CTk.CTk):
             except ConnectionResetError:
                 print(ConnectionResetError)
                 break
-        client_socket.close()
+        # client_socket.close()
 
     def get_patient_information_message(self):
         message = ""
@@ -1065,7 +1074,7 @@ class App(CTk.CTk):
             with open(f"last_config.json", "w") as file:
                 json.dump(last_config, file)
 
-    def generate_setting_file(self):
+    def generate_setting_file(self, root):
         setting = {
             "duration": {
                 "Action.R": self.rest_duration,
@@ -1089,21 +1098,21 @@ class App(CTk.CTk):
             "calibrated": self.calibration_flag.get(),
             "num_of_runs": self.repeated_runs
         }
-        with open(f"{self.get_data_file_path('json')}", "w") as file:
+        with open(f"{self.get_data_file_path('json', root)}", "w") as file:
             json.dump(setting, file)
 
-    def generate_label_file(self):  # Call when recording is finished
-        with open(f"{self.get_data_file_path('txt')}", "w") as file:
+    def generate_label_file(self, root):  # Call when recording is finished
+        with open(f"{self.get_data_file_path('txt', root)}", "w") as file:
             for action in self.calibration_scheme:
                 file.write(f"{action[0].value}" + '\n')
             for i in range(0, self.repeated_runs):
                 for action in self.recording_scheme_per_run:
                     file.write(f"{action[0].value}" + '\n')
 
-    def generate_data_file(self, data):
+    def generate_data_file(self, data, root):
         data = np.array(data)
         df = pd.DataFrame(data)
-        df.to_csv(f"{self.get_data_file_path('csv')}", index=False)
+        df.to_csv(f"{self.get_data_file_path('csv', root)}", index=False)
 
     # TODO: sync sample pull with system clock with the lowest error margin possible (<1ms)
     def pull_eeg_data(self):
@@ -1185,9 +1194,9 @@ class App(CTk.CTk):
 
         self.latest_run_duration = last_sample_timestamp - first_sample_timestamp
         print("Run duration: " + str(self.latest_run_duration))
-        self.generate_label_file()
-        self.generate_data_file(data)
-        self.generate_setting_file()
+        self.generate_label_file("data/")
+        self.generate_data_file(data, "data/")
+        self.generate_setting_file("data/")
         self.recording_progress_label.configure(text="Hoàn thành thu dữ liệu")
 
         first_sample_timestamp = 0
@@ -1239,22 +1248,32 @@ class App(CTk.CTk):
         # TODO: Send command to VR interface to change the exercise environment
 
     def set_hands_exercise(self):
-        pass
+        self.right_image = self.training_exercise_images[2]
+        self.left_image = self.training_exercise_images[3]
 
-    def set_left_hand_right_foot_exercise(self):
-        pass
+    def set_left_hand_right_foot_exercise(self):        
+        self.right_image = self.training_exercise_images[1]
+        self.left_image = self.training_exercise_images[2]
 
-    def set_right_hand_left_foot_exercise(self):
-        pass
+
+    def set_right_hand_left_foot_exercise(self):        
+        self.right_image = self.training_exercise_images[3]
+        self.left_image = self.training_exercise_images[0]
+
+    def get_training_exercises_image(self, exercise):
+        if (exercise == 0): return self.right_image
+        else: return self.left_image
     
     def start_training_session(self):
-        # On starting a training session:
-        #   - Send training scheme to Unity interface
-        #   - Start pulling EEG samples from LSL
-        #       + Plot these datas in a 10 second time window, updating every second
-        #       + Create a randomized training scheme for the session, consisting of 0 and 1, corresponding to left and right
-        #       + Infer from 12 4.5s overlapping windows, with an interval of 0.5s and see which result are more likely
-        #   - Continue for the entire training scheme or until stopped (stop_trainin_session)
+        '''
+        On starting a training session:
+          - Send training scheme to Unity interface
+          - Start pulling EEG samples from LSL
+              + Plot these datas in a 10 second time window, updating every second
+              + Create a randomized training scheme for the session, consisting of 0 and 1, corresponding to left and right
+              + Infer from 12 4.5s overlapping windows, with an interval of 0.5s and see which result are more likely
+          - Continue for the entire training scheme or until stopped (stop_trainin_session)
+        '''
         self.patient_information_sent = True ##dummy
         if (self.patient_information_sent == False):
             self.show_error_message("Hãy nhập và gửi thông tin người bệnh!")
@@ -1265,13 +1284,14 @@ class App(CTk.CTk):
             self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
             # self.data_buffer = np.zeros(
             #     (self.time_window * self.sampling_frequency, self.inlet.channel_count - 5))
-            self.exercises_list = self.generate_random_exercise(10)
+            self.exercises_list = self.generate_random_exercise(20)
             print(len(self.exercises_list))
             self.start_training_thread()
             # self.start_plotting_thread()
         # self.update_data_buffer()
 
     def stop_training_session(self):
+        print("Training stopped")
         self.is_training = False
         self.inlet.close_stream()
         self.inlet = None
@@ -1279,7 +1299,10 @@ class App(CTk.CTk):
         self.training_thread = None
 
     def update_data(self):
-        # inferred_data = []
+        self.inlet.open_stream()
+        
+        error_count = 0
+        inferred_data = []
         inferred_trial_results = []
         inferred_exercise_results = [] #expected length = len(self.exercises_list)
         self.current_exercise_index = 0
@@ -1287,28 +1310,38 @@ class App(CTk.CTk):
         res = None
         self.client_socket.send(bytes(str(current_exercise), "utf-8"))
         print("Sending: " + str(current_exercise))
-        self.ground_truth_value_label.configure(text=str(current_exercise))
-        while self.is_training and self.current_exercise_index < len(self.exercises_list):  
+        self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
+        while self.current_exercise_index < len(self.exercises_list):  
             sample, timestamp = self.inlet.pull_sample()
+            print(timestamp)
             if timestamp != None:
+                self.data_buffer.append(sample[3:len(sample)-2])
+                inferred_data.append(sample[3:len(sample)-2])
+                #when self.data_buffer is full
                 if len(self.data_buffer) == (self.time_window * self.sampling_frequency):
+                    #At the start and after enough samples have been pulled
                     if (self.sample_count_since_full == 0):
-                        print(" infer number:" + str(self.current_exercise_index))
+                        print("infer number: " + str(self.current_exercise_index))
                         self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1
                         # inferred_data.append(self.data_buffer)
-                        if len(self.group) == self.trials_before_res:
+                        #After enough infer calls, which filled up 
+                        if len(self.group) >= self.trials_before_res:
                             #message contains 1 digit: 
                             #first one is ref action (0, 1),
                             #second one is character action(0, 1, 9) with 2 being no action
-
                             counter = collections.Counter(self.group)
                             res = counter.most_common(1)[0][0]
                             inferred_trial_results.append(self.group)
                             inferred_exercise_results.append(res)
+                            #hard code
+                            if (self.exercises_list[self.current_exercise_index] == 0 and counter.most_common(1)[0][1] == len(self.group)): 
+                                res = 0
+                                print("Corrected")
                             self.group = []
                             self.data_buffer = []
-                            self.inferrence_value_label.configure(text=str(res))
-                            print("Result: " + str(res))
+                            #hard code
+                            self.inferrence_value_label.configure(image=self.get_training_exercises_image(res))
+                            # print("Result: " + str(res))
                             if res == current_exercise:
                                 #If polled inference result matches ground truth:
                                 #Play animation
@@ -1317,25 +1350,36 @@ class App(CTk.CTk):
                                 #Update training info
                             else: 
                                 self.client_socket.send(bytes(str(9), "utf-8"))
+                                pass
+                            time.sleep(5)
                             
                             self.current_exercise_index += 1 
                             if (self.current_exercise_index < len(self.exercises_list)):
                                 current_exercise = self.exercises_list[self.current_exercise_index] 
                                 # threading.Timer(5.0, self.client_socket.send(bytes(str(current_exercise), "utf-8"))).start()
                                 self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+                                self.inferrence_label.configure(image=None)
+                                self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
                                 print("Sending: " + str(current_exercise))
-
-                            time.sleep(5)
-                        
+                                error_count = 0 #reset error count after each successful training exercise
+                    print("Current sample count since full:" + str(self.sample_count_since_full))
                     self.sample_count_since_full += 1
                     
                     #After update_rate time
-                    if (self.sample_count_since_full == self.update_rate * self.sampling_frequency):
+                    if (self.sample_count_since_full >= self.update_rate * self.sampling_frequency):
                         self.sample_count_since_full = 0
                     if(len(self.data_buffer) != 0): self.data_buffer.pop(0)
-                self.data_buffer.append(sample[3:len(sample)-2])
+                
+            else:
+                error_count += 1
+                if error_count >= self.sampling_frequency: #error for more than 10seconds
+                    self.generate_data_file(inferred_data, "training_data/")
+                    self.generate_training_labels(inferred_trial_results, inferred_exercise_results, "training_data/")
+                    self.stop_training_session()
+                    self.show_error_message("Dừng bài tập do mất kết nối với Emotiv")
+        self.generate_data_file(inferred_data, "training_data/")
+        self.generate_training_labels(inferred_trial_results, inferred_exercise_results, "training_data/")
         self.stop_training_session()   
-        print("Training stopped")    
         
     def infer(self, data, ground_truth):
         def up_sample(input_arr, old_rate=128, new_rate=250):
@@ -1391,6 +1435,18 @@ class App(CTk.CTk):
         if self.training_thread == None or not self.training_thread.is_alive():
             self.training_thread = threading.Thread(target=self.update_data, daemon=True)
             self.training_thread.start()
+    
+    def generate_training_labels(self, blocks, results, root):
+        label = ""
+        with open(f"{self.get_data_file_path('txt', root)}", "w") as file:
+            for i in range(0, len(results)): #print whatever results are available
+                label += str(self.exercises_list[i]) + ","
+                for k in range(0, len(blocks[i])):
+                    label += str(blocks[i][k])#results per infer trial
+                label += "," + str(results[i]) + "\n"
+                file.write(label)
+                label = ""
+        
     # ----------------------Settings----------------------#
     # Light and Dark Mode switch
 
@@ -1475,8 +1531,12 @@ class App(CTk.CTk):
             "M" if self.gender_options.get() == "Nam" else "F") + "_" + self.normalize_string(self.age_entry.get()) + ".json"
         return file_path
 
-    def get_data_file_path(self, file_type):
-        dir_path = "data/" + datetime.now().strftime("%d_%B_%Y") + "/" + self.normalize_string(self.current_recording_setting.get()) + \
+    '''
+    file_type: csv, pdf or txt
+    root: name of large folders
+    '''
+    def get_data_file_path(self, file_type, root):
+        dir_path = root + datetime.now().strftime("%d_%B_%Y") + "/" + self.normalize_string(self.current_recording_setting.get()) + \
             "/" + self.normalize_string(self.name_entry.get())
         if os.path.isdir(dir_path) == False:
             os.makedirs(dir_path)
