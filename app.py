@@ -508,6 +508,10 @@ class App(CTk.CTk):
         self.inferrence_value_label = CTk.CTkLabel(
             master=self.training_info_frame,  text="", font=("Arial", 24))
         
+        self.training_progress_label = CTk.CTkLabel(
+            master=self.training_info_frame, text="", font=("Arial", 18)
+        )
+        
         self.training_exercise_images = [CTk.CTkImage(light_image=Image.open(
             "assets/images/arrow_left_foot.png"), size=(380, 200)),
             CTk.CTkImage(light_image=Image.open(
@@ -557,6 +561,7 @@ class App(CTk.CTk):
         
         self.start_training_button.grid(row=2, column=0, sticky="ew")
         self.stop_training_button.grid(row=2, column=1, sticky="ew")
+        self.training_progress_label.grid(row=2, column=0, columnspan=2, sticky="s")
     
         # ---------------------Settings---------------------#
         self.display_mode_flag = CTk.IntVar(value=0)
@@ -1281,6 +1286,7 @@ class App(CTk.CTk):
             self.show_error_message("Hãy chọn bài tập!")
         else:
             self.is_training = True
+            self.training_progress_label.configure(text="Đang luyện tập...")
             self.inlet = StreamInlet(self.eeg_stream[0], max_buflen=1)
             # self.data_buffer = np.zeros(
             #     (self.time_window * self.sampling_frequency, self.inlet.channel_count - 5))
@@ -1292,6 +1298,7 @@ class App(CTk.CTk):
 
     def stop_training_session(self):
         print("Training stopped")
+        self.training_progress_label.configure(text="Kết thúc luyện tập")
         self.is_training = False
         self.inlet.close_stream()
         self.inlet = None
