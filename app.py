@@ -1316,7 +1316,7 @@ class App(CTk.CTk):
         self.current_exercise_index = 0
         current_exercise = self.exercises_list[self.current_exercise_index]
         res = None
-        # self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+        self.client_socket.send(bytes(str(current_exercise), "utf-8"))
         # print("Sending: " + str(current_exercise))
         self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
         while self.current_exercise_index < len(self.exercises_list):  
@@ -1354,17 +1354,17 @@ class App(CTk.CTk):
                                 self.inferrence_value_label.configure(image=self.get_training_exercises_image(res))
                                 # print("Result: " + str(res))
                                 if res == current_exercise:
-                                    # self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
+                                    self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
                                     print("Sending correct answer:" + str(current_exercise + 5))
                                 else: 
-                                    # self.client_socket.send(bytes(str(9), "utf-8"))
+                                    self.client_socket.send(bytes(str(9), "utf-8"))
                                     pass
                                 ignoring_data = True
                             
                                 self.current_exercise_index += 1 
                                 if (self.current_exercise_index < len(self.exercises_list)):
                                     current_exercise = self.exercises_list[self.current_exercise_index] 
-                                    # self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+                                    self.client_socket.send(bytes(str(current_exercise), "utf-8"))
                                     self.inferrence_label.configure(image=None)
                                     self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
                                     print("Sending: " + str(current_exercise))
