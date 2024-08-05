@@ -1310,7 +1310,7 @@ class App(CTk.CTk):
         inferred_data = []
         inferred_trial_results = []
         ignoring_data = False
-        ignored = []
+        ignored = 0
         inferred_exercise_results = [] #expected length = len(self.exercises_list)
         self.current_exercise_index = 0
         current_exercise = self.exercises_list[self.current_exercise_index]
@@ -1323,15 +1323,15 @@ class App(CTk.CTk):
             # print(timestamp)
             if timestamp != None:
                 self.data_buffer.append(sample[3:len(sample)-2])
+                inferred_data.append(sample[3:len(sample)-2])
                 if (ignoring_data == False):
-                    inferred_data.append(sample[3:len(sample)-2])
                     #when self.data_buffer is full
                     if len(self.data_buffer) == (self.time_window * self.sampling_frequency):
                         #At the start and after enough samples have been pulled
                         if (self.sample_count_since_full == 0):
                             print("infer number: " + str(self.current_exercise_index))
                             self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1  
-                            #After enough infer cah filled up 
+                            #After enough infer filled up 
                             if len(self.group) >= self.trials_before_res:
                                 '''
                                 message contains 1 digit: 
@@ -1377,10 +1377,10 @@ class App(CTk.CTk):
                 else:
                     self.data_buffer = []
                     self.group = []
-                    ignored.append(sample[3:len(sample)-2])
+                    ignored = ignored + 1
                     print("Ignored")
-                    if (len(ignored) == self.sampling_frequency*5): 
-                        ignored = []
+                    if (ignored == self.sampling_frequency*5): 
+                        ignored = 0
                         print("Start pulling again...")
                         ignoring_data = False
             else:
