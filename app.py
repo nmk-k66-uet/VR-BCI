@@ -1293,9 +1293,7 @@ class App(CTk.CTk):
             self.exercises_list = self.generate_random_exercise(20)
             print(len(self.exercises_list))
             self.start_training_thread()
-            # self.start_plotting_thread()
-        # self.update_data_buffer()
-
+        
     def stop_training_session(self):
         print("Training stopped")
         self.training_progress_label.configure(text="Kết thúc luyện tập")
@@ -1305,12 +1303,14 @@ class App(CTk.CTk):
         del(self.training_thread)
         self.training_thread = None
 
-    def update_data(self):
+    def update_data(self): #TODO: separate data pulling and logic thread
         self.inlet.open_stream()
         
         error_count = 0
         inferred_data = []
         inferred_trial_results = []
+        ignoring_data = False
+        ignored = []
         inferred_exercise_results = [] #expected length = len(self.exercises_list)
         self.current_exercise_index = 0
         current_exercise = self.exercises_list[self.current_exercise_index]
@@ -1320,73 +1320,81 @@ class App(CTk.CTk):
         self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
         while self.current_exercise_index < len(self.exercises_list):  
             sample, timestamp = self.inlet.pull_sample()
-            print(timestamp)
+            # print(timestamp)
             if timestamp != None:
                 self.data_buffer.append(sample[3:len(sample)-2])
-                inferred_data.append(sample[3:len(sample)-2])
-                #when self.data_buffer is full
-                if len(self.data_buffer) == (self.time_window * self.sampling_frequency):
-                    #At the start and after enough samples have been pulled
-                    if (self.sample_count_since_full == 0):
-                        print("infer number: " + str(self.current_exercise_index))
-                        self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1
-                        # inferred_data.append(self.data_buffer)
-                        #After enough infer calls, which filled up 
-                        if len(self.group) >= self.trials_before_res:
-                            #message contains 1 digit: 
-                            #first one is ref action (0, 1),
-                            #second one is character action(0, 1, 9) with 2 being no action
-                            counter = collections.Counter(self.group)
-                            res = counter.most_common(1)[0][0]
-                            inferred_trial_results.append(self.group)
-                            inferred_exercise_results.append(res)
-                            #hard code
-                            if (self.exercises_list[self.current_exercise_index] == 0 and counter.most_common(1)[0][1] == len(self.group)): 
-                                res = 0
-                                print("Corrected")
-                            self.group = []
-                            self.data_buffer = []
-                            #hard code
-                            self.inferrence_value_label.configure(image=self.get_training_exercises_image(res))
-                            # print("Result: " + str(res))
-                            if res == current_exercise:
-                                #If polled inference result matches ground truth:
-                                #Play animation
-                                self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
-                                print("Sending correct answer:" + str(current_exercise + 5))
-                                #Update training info
-                            else: 
-                                self.client_socket.send(bytes(str(9), "utf-8"))
-                                pass
-                            time.sleep(5)
+                if (ignoring_data == False):
+                    inferred_data.append(sample[3:len(sample)-2])
+                    #when self.data_buffer is full
+                    if len(self.data_buffer) == (self.time_window * self.sampling_frequency):
+                        #At the start and after enough samples have been pulled
+                        if (self.sample_count_since_full == 0):
+                            print("infer number: " + str(self.current_exercise_index))
+                            self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1  
+                            #After enough infer cah filled up 
+                            if len(self.group) >= self.trials_before_res:
+                                '''
+                                message contains 1 digit: 
+                                first one is ref action (0, 1),
+                                second one is character action(0, 1, 9) with 2 being no action
+                                '''
+                                counter = collections.Counter(self.group)
+                                res = counter.most_common(1)[0][0]
+                                inferred_trial_results.append(self.group)
+                                inferred_exercise_results.append(res)
+                                #hard code
+                                if (self.exercises_list[self.current_exercise_index] == 0 and counter.most_common(1)[0][1] == len(self.group)): 
+                                    res = 0
+                                    print("Corrected")
+                                self.group = []
+                                self.data_buffer = []
+                                #hard code
+                                self.inferrence_value_label.configure(image=self.get_training_exercises_image(res))
+                                # print("Result: " + str(res))
+                                if res == current_exercise:
+                                    self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
+                                    print("Sending correct answer:" + str(current_exercise + 5))
+                                else: 
+                                    self.client_socket.send(bytes(str(9), "utf-8"))
+                                    pass
+                                ignoring_data = True
                             
-                            self.current_exercise_index += 1 
-                            if (self.current_exercise_index < len(self.exercises_list)):
-                                current_exercise = self.exercises_list[self.current_exercise_index] 
-                                # threading.Timer(5.0, self.client_socket.send(bytes(str(current_exercise), "utf-8"))).start()
-                                self.client_socket.send(bytes(str(current_exercise), "utf-8"))
-                                self.inferrence_label.configure(image=None)
-                                self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
-                                print("Sending: " + str(current_exercise))
-                                error_count = 0 #reset error count after each successful training exercise
-                    print("Current sample count since full:" + str(self.sample_count_since_full))
-                    self.sample_count_since_full += 1
-                    
-                    #After update_rate time
-                    if (self.sample_count_since_full >= self.update_rate * self.sampling_frequency):
-                        self.sample_count_since_full = 0
-                    if(len(self.data_buffer) != 0): self.data_buffer.pop(0)
-                
+                                self.current_exercise_index += 1 
+                                if (self.current_exercise_index < len(self.exercises_list)):
+                                    current_exercise = self.exercises_list[self.current_exercise_index] 
+                                    self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+                                    self.inferrence_label.configure(image=None)
+                                    self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
+                                    print("Sending: " + str(current_exercise))
+                                    error_count = 0 #reset error count after each successful training exercise
+                        print("Current sample count since full:" + str(self.sample_count_since_full))
+                        self.sample_count_since_full += 1
+                        #After update_rate time
+                        if (self.sample_count_since_full >= self.update_rate * self.sampling_frequency):
+                            self.sample_count_since_full = 0
+                            print("Ready to infer")
+                        if(len(self.data_buffer) != 0): self.data_buffer.pop(0)
+                else:
+                    self.data_buffer = []
+                    self.group = []
+                    ignored.append(sample[3:len(sample)-2])
+                    print("Ignored")
+                    if (len(ignored) == self.sampling_frequency*5): 
+                        ignored = []
+                        print("Start pulling again...")
+                        ignoring_data = False
             else:
                 error_count += 1
                 if error_count >= self.sampling_frequency: #error for more than 10seconds
-                    self.generate_data_file(inferred_data, "training_data/")
-                    self.generate_training_labels(inferred_trial_results, inferred_exercise_results, "training_data/")
+                    self.generate_files_after_training(inferred_data, inferred_trial_results, inferred_exercise_results)
                     self.stop_training_session()
                     self.show_error_message("Dừng bài tập do mất kết nối với Emotiv")
-        self.generate_data_file(inferred_data, "training_data/")
-        self.generate_training_labels(inferred_trial_results, inferred_exercise_results, "training_data/")
-        self.stop_training_session()   
+        self.generate_files_after_training(inferred_data, inferred_trial_results, inferred_exercise_results)
+        self.stop_training_session() 
+
+    def generate_files_after_training(self, data, trial_results, exercise_results):
+        self.generate_data_file(data, "training_data/")
+        self.generate_training_labels(trial_results, exercise_results, "training_data/")
         
     def infer(self, data, ground_truth):
         def up_sample(input_arr, old_rate=128, new_rate=250):
