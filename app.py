@@ -493,6 +493,7 @@ class App(CTk.CTk):
         self.group = []
         self.model = models.ComplexDBEEGNet_classifier(2, 22, 1125)
         self.model.load_weights('subject-1.weights.h5', by_name=True, skip_mismatch=True)
+        self.model.predict(np.zeros((1, 2, 22, 1125)))
 
         self.start_training_button = CTk.CTkButton(self.training_info_frame, text="Bắt đầu luyện tập", font=(
             "Arial", 18), command=self.start_training_session, height=40, width=100)
@@ -1315,8 +1316,8 @@ class App(CTk.CTk):
         self.current_exercise_index = 0
         current_exercise = self.exercises_list[self.current_exercise_index]
         res = None
-        self.client_socket.send(bytes(str(current_exercise), "utf-8"))
-        print("Sending: " + str(current_exercise))
+        # self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+        # print("Sending: " + str(current_exercise))
         self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
         while self.current_exercise_index < len(self.exercises_list):  
             sample, timestamp = self.inlet.pull_sample()
@@ -1330,7 +1331,7 @@ class App(CTk.CTk):
                         #At the start and after enough samples have been pulled
                         if (self.sample_count_since_full == 0):
                             print("infer number: " + str(self.current_exercise_index))
-                            self.infer(self.data_buffer, self.exercises_list) #len(self.group) += 1  
+                            self.infer(self.data_buffer, self.exercises_list[self.current_exercise_index]) #len(self.group) += 1  
                             #After enough infer filled up 
                             if len(self.group) >= self.trials_before_res:
                                 '''
@@ -1342,6 +1343,7 @@ class App(CTk.CTk):
                                 res = counter.most_common(1)[0][0]
                                 inferred_trial_results.append(self.group)
                                 inferred_exercise_results.append(res)
+                                print("Last sample timestamp: " + str(timestamp))
                                 #hard code
                                 if (self.exercises_list[self.current_exercise_index] == 0 and counter.most_common(1)[0][1] == len(self.group)): 
                                     res = 0
@@ -1352,22 +1354,22 @@ class App(CTk.CTk):
                                 self.inferrence_value_label.configure(image=self.get_training_exercises_image(res))
                                 # print("Result: " + str(res))
                                 if res == current_exercise:
-                                    self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
+                                    # self.client_socket.send(bytes(str(current_exercise + 5), "utf-8"))
                                     print("Sending correct answer:" + str(current_exercise + 5))
                                 else: 
-                                    self.client_socket.send(bytes(str(9), "utf-8"))
+                                    # self.client_socket.send(bytes(str(9), "utf-8"))
                                     pass
                                 ignoring_data = True
                             
                                 self.current_exercise_index += 1 
                                 if (self.current_exercise_index < len(self.exercises_list)):
                                     current_exercise = self.exercises_list[self.current_exercise_index] 
-                                    self.client_socket.send(bytes(str(current_exercise), "utf-8"))
+                                    # self.client_socket.send(bytes(str(current_exercise), "utf-8"))
                                     self.inferrence_label.configure(image=None)
                                     self.ground_truth_value_label.configure(image=self.get_training_exercises_image(current_exercise))
                                     print("Sending: " + str(current_exercise))
                                     error_count = 0 #reset error count after each successful training exercise
-                        print("Current sample count since full:" + str(self.sample_count_since_full))
+                        # print("Current sample count since full:" + str(self.sample_count_since_full))
                         self.sample_count_since_full += 1
                         #After update_rate time
                         if (self.sample_count_since_full >= self.update_rate * self.sampling_frequency):
@@ -1378,7 +1380,7 @@ class App(CTk.CTk):
                     self.data_buffer = []
                     self.group = []
                     ignored = ignored + 1
-                    print("Ignored")
+                    # print("Ignored")
                     if (ignored == self.sampling_frequency*5): 
                         ignored = 0
                         print("Start pulling again...")
@@ -1396,7 +1398,11 @@ class App(CTk.CTk):
         self.generate_data_file(data, "training_data/")
         self.generate_training_labels(trial_results, exercise_results, "training_data/")
         
-    def infer(self, data, ground_truth):
+    def infer(self, data, ground_truth=0):
+        '''
+        data: 4.5 seconds of data = 576 samples
+        ground_truth: 
+        '''
         def up_sample(input_arr, old_rate=128, new_rate=250):
             new_length = int(len(input_arr) * new_rate / old_rate)
             resampled_arr = resample(input_arr, new_length)
